@@ -1,4 +1,6 @@
+const axios = require('axios');
 const express = require('express');
+
 const {
   crearEstadoInicial,
   actualizarEstado,
@@ -54,10 +56,6 @@ app.post('/reset/:telefono', (req, res) => {
   res.json({ ok: true, mensaje: `Sesión ${telefono} reiniciada` });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
-
 app.get('/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'clarify2024';
 
@@ -72,10 +70,60 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-app.post('/webhook', (req, res) => {
-  console.log('Mensaje recibido de Meta');
+app.post('/webhook', async (req, res) => {
+  try {
+    console.log('Mensaje recibido de Meta');
 
-  console.log(JSON.stringify(req.body, null, 2));
+    const mensaje =
+      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
-  res.sendStatus(200);
+    if (!mensaje) {
+      return res.sendStatus(200);
+    }
+
+    const telefono = mensaje.from;
+    const texto = mensaje.text?.body || '';
+
+    console.log('Teléfono:', telefono);
+    console.log('Texto:', texto);
+
+    let sesion = obtenerSesion(telefono);
+
+    if (!sesion) {
+      sesion = crearEstadoInicial();
+    }
+
+    const estadoActualizado = actualizarEstado(texto, sesion);
+    const accion = decidirSiguienteAccion(estadoActualizado);
+
+    guardarSesion(telefono, estadoActualizado);
+
+    await axios.post(
+      `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to: telefono,
+        type: 'text',
+        text: {
+          body: accion.respuesta
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    res.sendStatus(200);
+
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    res.sendStatus(500);
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
