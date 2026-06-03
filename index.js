@@ -42,6 +42,12 @@ app.post('/test-message', (req, res) => {
 
   guardarSesion(telefono, estadoActualizado);
 
+  console.log('TEST - Teléfono:', telefono);
+  console.log('TEST - Texto:', mensaje);
+  console.log('TEST - Respuesta ClarifyIQ:', accion.respuesta);
+  console.log('TEST - Acción:', accion.accion);
+  console.log('TEST - Derivar:', accion.derivar);
+
   res.json({
     respuesta: accion.respuesta,
     accion: accion.accion,
@@ -53,6 +59,7 @@ app.post('/test-message', (req, res) => {
 app.post('/reset/:telefono', (req, res) => {
   const { telefono } = req.params;
   eliminarSesion(telefono);
+  console.log('Sesión reiniciada:', telefono);
   res.json({ ok: true, mensaje: `Sesión ${telefono} reiniciada` });
 });
 
@@ -78,6 +85,7 @@ app.post('/webhook', async (req, res) => {
       req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
     if (!mensaje) {
+      console.log('Webhook sin mensaje de usuario. Se responde 200.');
       return res.sendStatus(200);
     }
 
@@ -91,6 +99,7 @@ app.post('/webhook', async (req, res) => {
 
     if (!sesion) {
       sesion = crearEstadoInicial();
+      console.log('Sesión nueva creada para:', telefono);
     }
 
     const estadoActualizado = actualizarEstado(texto, sesion);
@@ -98,7 +107,14 @@ app.post('/webhook', async (req, res) => {
 
     guardarSesion(telefono, estadoActualizado);
 
-    await axios.post(
+    console.log('Estado flujo:', estadoActualizado.estado_flujo);
+    console.log('Faltantes:', estadoActualizado.faltantes);
+    console.log('Orden mínimo logrado:', estadoActualizado.ordenMinimoLogrado);
+    console.log('Respuesta ClarifyIQ:', accion.respuesta);
+    console.log('Acción ClarifyIQ:', accion.accion);
+    console.log('Derivar:', accion.derivar);
+
+    const respuestaMeta = await axios.post(
       `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
       {
         messaging_product: 'whatsapp',
@@ -116,10 +132,13 @@ app.post('/webhook', async (req, res) => {
       }
     );
 
+    console.log('Respuesta enviada correctamente a WhatsApp');
+    console.log('Meta response status:', respuestaMeta.status);
+
     res.sendStatus(200);
 
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    console.error('Error procesando webhook:', error.response?.data || error.message);
     res.sendStatus(500);
   }
 });
