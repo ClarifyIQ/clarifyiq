@@ -118,11 +118,40 @@ function detectarPresupuesto(texto) {
 function detectarDormitorios(texto) {
   const t = normalizar(texto);
 
-  const match = t.match(
-    /(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)|(dormitorios?|dorm|habitaciones?|hab|ambientes?)\s*(\d+)/i
+  const numerosTexto = {
+    un: '1',
+    uno: '1',
+    una: '1',
+    dos: '2',
+    tres: '3',
+    cuatro: '4',
+    cinco: '5',
+    seis: '6',
+    siete: '7',
+    ocho: '8'
+  };
+
+  const sinonimosDormitorio =
+    '(dormitorios?|dorm|habitaciones?|hab|cuartos?|rec[aá]maras?|piezas?)';
+
+  let match = t.match(
+    new RegExp(`(\\d+)\\s*${sinonimosDormitorio}|${sinonimosDormitorio}\\s*(\\d+)`, 'i')
   );
 
-  if (match) return match[1] || match[4];
+  if (match) {
+    return match[1] || match[3];
+  }
+
+  for (const [textoNumero, valor] of Object.entries(numerosTexto)) {
+    const regex = new RegExp(
+      `\\b${textoNumero}\\b\\s*${sinonimosDormitorio}|${sinonimosDormitorio}\\s*\\b${textoNumero}\\b`,
+      'i'
+    );
+
+    if (regex.test(t)) {
+      return valor;
+    }
+  }
 
   if (/^\d+$/.test(t.trim())) {
     const n = parseInt(t.trim(), 10);
@@ -131,7 +160,6 @@ function detectarDormitorios(texto) {
 
   return null;
 }
-
 function detectarIntencion(texto) {
   const t = normalizar(texto);
 
