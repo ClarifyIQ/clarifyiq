@@ -29,6 +29,9 @@ function crearEstadoInicial() {
     coincidencias_presentadas: 0,
     validacion_externa: null,
     necesita_aclaracion: null,
+    pregunta_cliente: null,
+    accion_post_cierre: null,
+    historial_cambios: [],
     historial: []
   };
 }
@@ -150,6 +153,10 @@ function detectarIntencion(texto) {
 function detectarPreguntaDelCliente(texto) {
   const t = normalizar(texto);
 
+  if (/(cómo va|como va|novedades|hay algo|apareció algo|aparecio algo|sigue activa|estado de la búsqueda|estado de la busqueda)/i.test(t)) {
+    return 'CONSULTA_ESTADO_BUSQUEDA';
+  }
+
   if (/(qué zonas|que zonas|zonas disponibles|dónde tienen|donde tienen|qué hay disponible|que hay disponible)/i.test(t)) {
     return 'PREGUNTA_ZONAS_DISPONIBLES';
   }
@@ -168,6 +175,15 @@ function detectarZonaOCriterio(texto) {
   if (!original) return null;
 
   if (detectarPreguntaDelCliente(texto)) return null;
+
+  const cambioZona = original.match(/mejor\s+(.+?)\s+que\s+(.+)/i);
+  if (cambioZona && cambioZona[1]) {
+    return {
+      zona_o_criterio: cambioZona[1].trim(),
+      criterio_zona: null,
+      punto_referencia: null
+    };
+  }
 
   if (/(plaza|espacio verde|parque)/i.test(t)) {
     return {
@@ -207,7 +223,9 @@ function detectarZonaOCriterio(texto) {
     'leandro n alem',
     'garupá',
     'garupa',
-    'candelaria'
+    'candelaria',
+    'nueva cordoba',
+    'nueva córdoba'
   ];
 
   if (ciudadesConocidas.includes(t)) {
@@ -243,6 +261,10 @@ function detectarCondiciones(texto) {
   if (/patio/i.test(t)) condiciones.push('patio');
   if (/seguridad|noche|oscuro/i.test(t)) condiciones.push('seguridad');
   if (/balc[oó]n/i.test(t)) condiciones.push('balcon');
+  if (/terraza/i.test(t)) condiciones.push('terraza');
+  if (/cocina integrada/i.test(t)) condiciones.push('cocina integrada');
+  if (/no quiero duplex|no quiero dúplex|no duplex|no dúplex|que no sea duplex|que no sea dúplex/i.test(t)) condiciones.push('no duplex');
+  if (/techo de chapa|sin chapa|que no sea de chapa/i.test(t)) condiciones.push('sin techo de chapa');
 
   return condiciones;
 }
@@ -262,7 +284,7 @@ function detectarObservacionExtra(texto, datosDetectados) {
   if (datosDetectados.intencion) return null;
   if (tieneCondiciones && !tieneCampoPrincipal) return texto;
 
-  if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria)/i.test(t)) {
+  if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria|mejor|no quiero|evitar)/i.test(t)) {
     return texto;
   }
 
@@ -275,6 +297,15 @@ function detectarValidacionExterna(texto) {
   return /(vi algo|encontr[eé]|me pasaron|me mostraron|vi un aviso|marketplace|zonaprop|publicaci[oó]n)/i.test(
     t
   );
+}
+
+function crearCambio(campo, anterior, nuevo) {
+  return {
+    campo,
+    anterior: anterior ?? null,
+    nuevo: nuevo ?? null,
+    fecha: new Date().toISOString()
+  };
 }
 
 function extraerDatos(mensaje, estado) {
@@ -359,8 +390,134 @@ function calcularEstadoFlujo(leadData, faltantes) {
   return 'orden_logrado';
 }
 
+function actualizarEstadoPostCierre(mensaje, estado) {
+  const datos = extraerDatos(mensaje, estado);
+  const leadData = { ...estado.leadData };
+  const cambios = [];
+
+  if (datos.pregunta_cliente === 'CONSULTA_ESTADO_BUSQUEDA') {
+    return {
+      ...estado,
+      accion_post_cierre: 'CONSULTA_ESTADO_BUSQUEDA',
+      pregunta_cliente: datos.pregunta_cliente,
+      historial: [
+        ...(estado.historial || []),
+        {
+          evento: 'post_cierre_consulta_estado',
+          mensaje,
+          datos_detectados: datos,
+          estado_flujo: estado.estado_flujo,
+          fecha: new Date().toISOString()
+        }
+      ].slice(-30)
+    };
+  }
+
+  if (datos.necesita_aclaracion) {
+    return {
+      ...estado,
+      necesita_aclaracion: datos.necesita_aclaracion,
+      accion_post_cierre: 'ACLARACION_REQUERIDA',
+      historial: [
+        ...(estado.historial || []),
+        {
+          evento: 'post_cierre_aclaracion_requerida',
+          mensaje,
+          datos_detectados: datos,
+          estado_flujo: estado.estado_flujo,
+          fecha: new Date().toISOString()
+        }
+      ].slice(-30)
+    };
+  }
+
+  if (datos.presupuesto) {
+    cambios.push(crearCambio('presupuesto', leadData.presupuesto, datos.presupuesto));
+    leadData.presupuesto = datos.presupuesto;
+    leadData.moneda_presupuesto = datos.moneda_presupuesto || leadData.moneda_presupuesto;
+    leadData.presupuesto_original = datos.presupuesto_original || datos.presupuesto;
+  }
+
+  if (datos.zona_o_criterio) {
+    cambios.push(crearCambio('zona_o_criterio', leadData.zona_o_criterio, datos.zona_o_criterio));
+    leadData.zona_o_criterio = datos.zona_o_criterio;
+    leadData.criterio_zona = datos.criterio_zona ?? leadData.criterio_zona;
+    leadData.punto_referencia = datos.punto_referencia ?? leadData.punto_referencia;
+  }
+
+  if (datos.condiciones_clave) {
+    leadData.condiciones_clave = [
+      ...new Set([
+        ...(leadData.condiciones_clave || []),
+        ...datos.condiciones_clave
+      ])
+    ];
+  }
+
+  if (datos.observaciones_extra) {
+    leadData.observaciones_extra = [
+      ...new Set([
+        ...(leadData.observaciones_extra || []),
+        ...datos.observaciones_extra
+      ])
+    ];
+  }
+
+  const huboCambioDato = cambios.length > 0;
+  const huboCriterio =
+    (datos.condiciones_clave && datos.condiciones_clave.length > 0) ||
+    (datos.observaciones_extra && datos.observaciones_extra.length > 0);
+
+  let accion_post_cierre = 'ACLARACION_GUARDADA';
+
+  if (huboCambioDato && huboCriterio) {
+    accion_post_cierre = 'DATO_Y_CRITERIO_ACTUALIZADO';
+  } else if (huboCambioDato) {
+    accion_post_cierre = 'DATO_ACTUALIZADO';
+  } else if (huboCriterio) {
+    accion_post_cierre = 'CRITERIO_GUARDADO';
+  } else {
+    leadData.observaciones_extra = [
+      ...new Set([
+        ...(leadData.observaciones_extra || []),
+        mensaje
+      ])
+    ];
+  }
+
+  return {
+    ...estado,
+    leadData,
+    accion_post_cierre,
+    necesita_aclaracion: null,
+    pregunta_cliente: null,
+    historial_cambios: [
+      ...(estado.historial_cambios || []),
+      ...cambios
+    ].slice(-50),
+    historial: [
+      ...(estado.historial || []),
+      {
+        evento: 'post_cierre_mensaje_procesado',
+        mensaje,
+        datos_detectados: datos,
+        accion_post_cierre,
+        estado_flujo: estado.estado_flujo,
+        fecha: new Date().toISOString()
+      }
+    ].slice(-30)
+  };
+}
+
 function actualizarEstado(mensaje, estadoActual) {
   const estado = estadoActual || crearEstadoInicial();
+
+  if (
+    estado.ordenMinimoLogrado &&
+    ['orden_logrado', 'orden_logrado_evaluacion', 'orden_logrado_sin_derivar'].includes(estado.estado_flujo)
+  ) {
+    return actualizarEstadoPostCierre(mensaje, estado);
+  }
 
   if (detectarValidacionExterna(mensaje)) {
     return {
@@ -417,6 +574,8 @@ function actualizarEstado(mensaje, estadoActual) {
     derivar: estado_flujo === 'orden_logrado',
     necesita_aclaracion: datos.necesita_aclaracion || null,
     pregunta_cliente: datos.pregunta_cliente || null,
+    accion_post_cierre: null,
+    historial_cambios: estado.historial_cambios || [],
     historial: [
       ...(estado.historial || []),
       {
@@ -468,6 +627,52 @@ function respuestaCierreOrdenLogrado() {
 }
 
 function decidirSiguienteAccion(estado) {
+  if (estado.accion_post_cierre === 'CONSULTA_ESTADO_BUSQUEDA') {
+    return {
+      respuesta:
+        'Seguimos trabajando sobre la búsqueda.\n\n' +
+        'Por el momento no apareció una opción que justifique contactarte, pero si encontramos algo que realmente encaje con tus criterios nos pondremos en contacto con vos.',
+      accion: 'CONSULTA_ESTADO_BUSQUEDA',
+      derivar: false
+    };
+  }
+
+  if (estado.accion_post_cierre === 'DATO_Y_CRITERIO_ACTUALIZADO') {
+    return {
+      respuesta:
+        'Perfecto, actualicé la información de tu búsqueda y registré los nuevos criterios.',
+      accion: 'DATO_Y_CRITERIO_ACTUALIZADO',
+      derivar: true
+    };
+  }
+
+  if (estado.accion_post_cierre === 'DATO_ACTUALIZADO') {
+    return {
+      respuesta:
+        'Perfecto, actualicé la información de tu búsqueda.',
+      accion: 'DATO_ACTUALIZADO',
+      derivar: true
+    };
+  }
+
+  if (estado.accion_post_cierre === 'CRITERIO_GUARDADO') {
+    return {
+      respuesta:
+        'Perfecto, incorporé ese criterio a tu búsqueda.',
+      accion: 'CRITERIO_GUARDADO',
+      derivar: true
+    };
+  }
+
+  if (estado.accion_post_cierre === 'ACLARACION_GUARDADA') {
+    return {
+      respuesta:
+        'Perfecto, dejé registrada tu aclaración en la búsqueda.',
+      accion: 'ACLARACION_GUARDADA',
+      derivar: true
+    };
+  }
+
   if (estado.estado_flujo === 'validacion_externa') {
     return {
       respuesta: 'Pasámelo y lo revisamos antes de que avances.',
