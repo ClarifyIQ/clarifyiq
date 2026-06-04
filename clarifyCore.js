@@ -256,9 +256,9 @@ function detectarObservacionExtra(texto, datosDetectados) {
     datosDetectados.tipo_propiedad ||
     datosDetectados.zona_o_criterio ||
     datosDetectados.presupuesto ||
-    datosDetectados.dormitorios ||
-    datosDetectados.intencion;
+    datosDetectados.dormitorios;
 
+  if (datosDetectados.intencion) return null;
   if (tieneCondiciones && !tieneCampoPrincipal) return texto;
 
   if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria)/i.test(t)) {
@@ -457,6 +457,15 @@ function preguntaPorCampo(campo, estado) {
   return preguntas[campo] || 'Necesito un dato más para ordenar la búsqueda.';
 }
 
+function respuestaCierreOrdenLogrado() {
+  return (
+    'Perfecto.\n\n' +
+    'La búsqueda quedó ordenada y lista para trabajar.\n\n' +
+    'Si recordás algún detalle importante que te gustaría conseguir o evitar en la propiedad, podés escribirlo cuando quieras y lo incorporamos a la búsqueda.\n\n' +
+    'Si encontramos opciones que encajen con estos criterios, nos pondremos en contacto con vos.'
+  );
+}
+
 function decidirSiguienteAccion(estado) {
   if (estado.estado_flujo === 'validacion_externa') {
     return {
@@ -515,8 +524,7 @@ function decidirSiguienteAccion(estado) {
 
   if (estado.estado_flujo === 'orden_logrado_sin_derivar') {
     return {
-      respuesta:
-        'Perfecto, la búsqueda queda clara. La dejamos ordenada para cuando quieras avanzar.',
+      respuesta: respuestaCierreOrdenLogrado(),
       accion: 'ORDEN_LOGRADO_SIN_DERIVAR',
       derivar: false
     };
@@ -524,15 +532,14 @@ function decidirSiguienteAccion(estado) {
 
   if (estado.estado_flujo === 'orden_logrado_evaluacion') {
     return {
-      respuesta:
-        'Perfecto, la búsqueda queda clara. Seguimos filtrando para que aparezca algo que realmente encaje.',
+      respuesta: respuestaCierreOrdenLogrado(),
       accion: 'ORDEN_LOGRADO_EVALUACION',
       derivar: false
     };
   }
 
   return {
-    respuesta: 'Perfecto, la búsqueda queda clara y lista para activar.',
+    respuesta: respuestaCierreOrdenLogrado(),
     accion: 'ORDEN_LOGRADO',
     derivar: true
   };
