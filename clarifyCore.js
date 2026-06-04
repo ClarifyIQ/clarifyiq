@@ -128,17 +128,18 @@ function detectarIntencion(texto) {
   const t = normalizar(texto);
 
   if (
-    /(quiero avanzar|avanzar|quiero comprar|comprar ya|necesito comprar|necesito comprar ya|urgente|cuanto antes|listo|verla|visitar|señar)/i.test(t)
+    /^(sí|si|dale|ok|okay)$/i.test(t) ||
+    /(me interesaría verlo|me interesaria verlo|quiero verlo|me gustaría verlo|me gustaria verlo|avisame|avísame|me sirve|lo quiero ver|verlo|quiero avanzar|avanzar|quiero comprar|comprar ya|necesito comprar|necesito comprar ya|urgente|cuanto antes|listo|visitar|señar)/i.test(t)
   ) {
     return 'ejecucion';
   }
 
-  if (/(evaluando|comparando|viendo opciones|depende|analizando|todavía lo estoy pensando|todavia lo estoy pensando|lo estoy pensando)/i.test(t)) {
+  if (/(evaluando|comparando|viendo opciones|depende|analizando|todavía lo estoy pensando|todavia lo estoy pensando|lo estoy pensando|juntando información|juntando informacion|estoy juntando información|estoy juntando informacion)/i.test(t)) {
     return 'evaluacion';
   }
 
   if (
-    /(solo viendo|estoy viendo|averiguando|sin apuro|más adelante|mas adelante)/i.test(t)
+    /(solo viendo|estoy viendo|averiguando|estoy averiguando|por ahora averiguo|sin apuro|más adelante|mas adelante)/i.test(t)
   ) {
     return 'exploracion';
   }
@@ -451,7 +452,7 @@ function preguntaPorCampo(campo, estado) {
     dormitorios:
       '¿Cuántos dormitorios necesitás?',
     intencion:
-      '¿Querés avanzar si aparece algo que encaje o estás evaluando opciones?'
+      'Si aparece algo que encaje con tu búsqueda, ¿te interesaría verlo o todavía estás juntando información?'
   };
 
   return preguntas[campo] || 'Necesito un dato más para ordenar la búsqueda.';
