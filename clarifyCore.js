@@ -430,7 +430,7 @@ function actualizarEstado(mensaje, estadoActual) {
 }
 
 function preguntaPorCampo(campo, estado) {
-  const yaTieneHistorial = (estado.historial || []).length > 0;
+  const yaTieneHistorial = (estado.historial || []).length > 1;
 
   if (campo === 'tipo_propiedad' && !yaTieneHistorial) {
     return (
