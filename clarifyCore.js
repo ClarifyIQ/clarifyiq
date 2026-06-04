@@ -65,7 +65,10 @@ function detectarMoneda(texto) {
 function detectarPresupuesto(texto) {
   const t = normalizar(texto);
 
-  if (/(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)/i.test(t)) {
+  if (
+    /(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)/i.test(t) ||
+    /(dormitorios?|dorm|habitaciones?|hab|ambientes?)\s*(\d+)/i.test(t)
+  ) {
     return null;
   }
 
@@ -114,10 +117,10 @@ function detectarDormitorios(texto) {
   const t = normalizar(texto);
 
   const match = t.match(
-    /(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)/i
+    /(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)|(dormitorios?|dorm|habitaciones?|hab|ambientes?)\s*(\d+)/i
   );
 
-  if (match) return match[1];
+  if (match) return match[1] || match[4];
 
   if (/^\d+$/.test(t.trim())) {
     const n = parseInt(t.trim(), 10);
@@ -153,7 +156,7 @@ function detectarIntencion(texto) {
 function detectarPreguntaDelCliente(texto) {
   const t = normalizar(texto);
 
-  if (/(cómo va|como va|novedades|hay algo|apareció algo|aparecio algo|sigue activa|estado de la búsqueda|estado de la busqueda)/i.test(t)) {
+  if (/(cómo va|como va|cómo viene|como viene|novedades|noticias|alguna novedad|alguna noticia|encontraron algo|encontraste algo|apareció algo|aparecio algo|apareció alguna|aparecio alguna|hay algo|hay alguna propiedad|hay alguna opción|hay alguna opcion|encontraron propiedad|encontraron alguna propiedad|sigue activa|estado de la búsqueda|estado de la busqueda|tuvieron suerte)/i.test(t)) {
     return 'CONSULTA_ESTADO_BUSQUEDA';
   }
 
@@ -284,7 +287,7 @@ function detectarObservacionExtra(texto, datosDetectados) {
   if (datosDetectados.intencion) return null;
   if (tieneCondiciones && !tieneCampoPrincipal) return texto;
 
-  if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria|mejor|no quiero|evitar)/i.test(t)) {
+  if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria|mejor|no quiero|evitar|importante)/i.test(t)) {
     return texto;
   }
 
