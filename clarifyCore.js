@@ -44,6 +44,11 @@ function normalizar(texto) {
 
 function detectarTipo(texto) {
   const t = normalizar(texto);
+
+  if (/mono\s*ambiente|monoambiente/i.test(t)) {
+    return 'departamento';
+  }
+
   const tipos = [];
 
   if (/(departamento|depto|apartamento)/i.test(t)) tipos.push('departamento');
@@ -54,7 +59,6 @@ function detectarTipo(texto) {
   if (tipos.length > 1) return tipos.join(' o ');
   return tipos[0];
 }
-
 function detectarMoneda(texto) {
   const t = normalizar(texto);
 
