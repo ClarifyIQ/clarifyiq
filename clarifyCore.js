@@ -282,20 +282,7 @@ function detectarZonaOCriterio(texto) {
     };
   }
 
-  const match = original.match(
-    /(?:en|zona|barrio|por)\s+(.+?)(?:\s+hasta|\s+con|\s+\d|\s+y\s+quiero|$)/i
-  );
-
-  if (match && match[1]) {
-    return {
-      zona_o_criterio: match[1].trim(),
-      criterio_zona: null,
-      punto_referencia: null
-    };
-  }
-
-  return null;
-}
+ 
 function detectarCondiciones(texto) {
   const t = normalizar(texto);
   const condiciones = [];
@@ -307,7 +294,25 @@ function detectarCondiciones(texto) {
   if (/seguridad|noche|oscuro/i.test(t)) condiciones.push('seguridad');
   if (/balc[oó]n/i.test(t)) condiciones.push('balcon');
   if (/terraza/i.test(t)) condiciones.push('terraza');
-  if (/cocina integrada/i.test(t)) condiciones.push('cocina integrada');
+  if (/cocina integr  const match = original.match(
+    /(?:en|zona|barrio|por)\s+(.+?)(?:\s+hasta|\s+con|\s+\d|\s+y\s+quiero|$)/i
+  );
+
+  if (match && match[1]) {
+    const zonaDetectada = match[1].trim();
+
+    if (
+      /(realidad|puedo|llegar|presupuesto|pagar|tengo|dólares|dolares|usd|mil)/i.test(zonaDetectada)
+    ) {
+      return null;
+    }
+
+    return {
+      zona_o_criterio: zonaDetectada,
+      criterio_zona: null,
+      punto_referencia: null
+    };
+  }ada/i.test(t)) condiciones.push('cocina integrada');
   if (/no quiero duplex|no quiero dúplex|no duplex|no dúplex|que no sea duplex|que no sea dúplex/i.test(t)) condiciones.push('no duplex');
   if (/techo de chapa|sin chapa|que no sea de chapa/i.test(t)) condiciones.push('sin techo de chapa');
 
