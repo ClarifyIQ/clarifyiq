@@ -209,15 +209,20 @@ function detectarPreguntaDelCliente(texto) {
   return null;
 }
 
-  if (/(cerca de|cerca del|cerca a)/i.test(t)) {
-    const ref = original
-      .replace(/.*cerca (de|del|a)\s*/i, '')
-      .trim();
+function detectarZonaOCriterio(texto) {
+  const original = String(texto || '').trim();
+  const t = normalizar(texto);
 
+  if (!original) return null;
+
+  if (detectarPreguntaDelCliente(texto)) return null;
+
+  const cambioZona = original.match(/mejor\s+(.+?)\s+que\s+(.+)/i);
+  if (cambioZona && cambioZona[1]) {
     return {
-      zona_o_criterio: `cerca de ${ref}`,
-      criterio_zona: 'cercanía',
-      punto_referencia: ref
+      zona_o_criterio: cambioZona[1].trim(),
+      criterio_zona: null,
+      punto_referencia: null
     };
   }
 
@@ -230,8 +235,13 @@ function detectarPreguntaDelCliente(texto) {
   }
 
   if (/(cerca de|cerca del|cerca a)/i.test(t)) {
-    const ref = original
+    let ref = original
       .replace(/.*cerca (de|del|a)\s*/i, '')
+      .trim();
+
+    ref = ref
+      .split(/[.,;:]/)[0]
+      .replace(/\b(no me|si tiene|sí tiene|tengo|tendría|tendria|aproximadamente|no se|no sé)\b.*$/i, '')
       .trim();
 
     return {
