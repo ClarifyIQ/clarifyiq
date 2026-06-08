@@ -354,7 +354,17 @@ function extraerDatos(mensaje, estado) {
 
   const tipo = detectarTipo(mensaje);
   if (tipo) datos.tipo_propiedad = tipo;
+  if (/mono\s*ambiente|monoambiente/i.test(normalizar(mensaje))) {
+    datos.tipo_propiedad = 'departamento';
+    datos.cantidad_ambientes = '1';
+    datos.es_monoambiente = true;
+    datos.dormitorios = '0';
+  }
 
+  const ambienteMatch = normalizar(mensaje).match(/(\d+)\s*ambientes?/i);
+  if (ambienteMatch && !datos.es_monoambiente) {
+    datos.cantidad_ambientes = ambienteMatch[1];
+  }
   const zona = detectarZonaOCriterio(mensaje);
   if (zona) Object.assign(datos, zona);
 
