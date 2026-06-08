@@ -296,7 +296,6 @@ function detectarZonaOCriterio(texto) {
 
   return null;
 }
-
 function detectarCondiciones(texto) {
   const t = normalizar(texto);
   const condiciones = [];
