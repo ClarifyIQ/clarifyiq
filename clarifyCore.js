@@ -71,52 +71,30 @@ function detectarMoneda(texto) {
 function detectarPresupuesto(texto) {
   const t = normalizar(texto);
 
-  if (
-    /(\d+)\s*(dormitorios?|dorm|habitaciones?|hab|ambientes?)/i.test(t) ||
-    /(dormitorios?|dorm|habitaciones?|hab|ambientes?)\s*(\d+)/i.test(t)
-  ) {
-    return null;
-  }
+  const moneda =
+    /(usd|u\$s|dolares|dólares|dolar|dólar)/i.test(t)
+      ? 'USD'
+      : /(pesos?|ars)/i.test(t)
+      ? 'ARS'
+      : null;
 
-  const match = t.match(/(\d{1,3}(?:[.,]\d{3})+|\d+)(\s*k|\s*mil)?/i);
-  if (!match) return null;
-
-  let numero = match[1];
-  let valor;
-
-  if (/[.,]\d{3}/.test(numero)) {
-    valor = parseInt(numero.replace(/[.,]/g, ''), 10);
-  } else {
-    valor = parseFloat(numero.replace(',', '.'));
-  }
-
-  if (isNaN(valor)) return null;
-
-  if (match[2] && /(k|mil)/i.test(match[2])) {
-    valor *= 1000;
-  }
-
-  if (valor < 1000 && /\bmil\b/i.test(t)) {
-    valor *= 1000;
-  }
-
-  const moneda = detectarMoneda(texto);
-
-  if (moneda === 'ARS') {
+  const matchMil = t.match(/(\d+)\s*mil/i);
+  if (matchMil) {
     return {
-      presupuesto: null,
-      moneda_presupuesto: 'ARS',
-      presupuesto_original: String(Math.round(valor)),
-      necesita_aclaracion: 'PRESUPUESTO_EN_PESOS'
+      presupuesto: String(parseInt(matchMil[1], 10) * 1000),
+      moneda
     };
   }
 
-  return {
-    presupuesto: String(Math.round(valor)),
-    moneda_presupuesto: moneda || 'DESCONOCIDA',
-    presupuesto_original: String(Math.round(valor)),
-    necesita_aclaracion: moneda ? null : 'MONEDA_NO_ESPECIFICADA'
-  };
+  const matchNumero = t.match(/\b(\d{4,})\b/);
+  if (matchNumero) {
+    return {
+      presupuesto: matchNumero[1],
+      moneda
+    };
+  }
+
+  return null;
 }
 
 function detectarDormitorios(texto) {
