@@ -209,20 +209,15 @@ function detectarPreguntaDelCliente(texto) {
   return null;
 }
 
-function detectarZonaOCriterio(texto) {
-  const original = String(texto || '').trim();
-  const t = normalizar(texto);
+  if (/(cerca de|cerca del|cerca a)/i.test(t)) {
+    const ref = original
+      .replace(/.*cerca (de|del|a)\s*/i, '')
+      .trim();
 
-  if (!original) return null;
-
-  if (detectarPreguntaDelCliente(texto)) return null;
-
-  const cambioZona = original.match(/mejor\s+(.+?)\s+que\s+(.+)/i);
-  if (cambioZona && cambioZona[1]) {
     return {
-      zona_o_criterio: cambioZona[1].trim(),
-      criterio_zona: null,
-      punto_referencia: null
+      zona_o_criterio: `cerca de ${ref}`,
+      criterio_zona: 'cercanía',
+      punto_referencia: ref
     };
   }
 
