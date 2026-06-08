@@ -72,25 +72,51 @@ function detectarPresupuesto(texto) {
   const t = normalizar(texto);
 
   const moneda =
-    /(usd|u\$s|dolares|dólares|dolar|dólar)/i.test(t)
+    /(usd|u\$s|us\$|dolares|dólares|dolar|dólar)/i.test(t)
       ? 'USD'
-      : /(pesos?|ars)/i.test(t)
+      : /(pesos?|ars|peso argentino)/i.test(t)
       ? 'ARS'
       : null;
 
   const matchMil = t.match(/(\d+)\s*mil/i);
   if (matchMil) {
+    const valor = String(parseInt(matchMil[1], 10) * 1000);
+
+    if (moneda === 'ARS') {
+      return {
+        presupuesto: null,
+        moneda_presupuesto: 'ARS',
+        presupuesto_original: valor,
+        necesita_aclaracion: 'PRESUPUESTO_EN_PESOS'
+      };
+    }
+
     return {
-      presupuesto: String(parseInt(matchMil[1], 10) * 1000),
-      moneda
+      presupuesto: valor,
+      moneda_presupuesto: moneda || 'DESCONOCIDA',
+      presupuesto_original: valor,
+      necesita_aclaracion: moneda ? null : 'MONEDA_NO_ESPECIFICADA'
     };
   }
 
   const matchNumero = t.match(/\b(\d{4,})\b/);
   if (matchNumero) {
+    const valor = matchNumero[1];
+
+    if (moneda === 'ARS') {
+      return {
+        presupuesto: null,
+        moneda_presupuesto: 'ARS',
+        presupuesto_original: valor,
+        necesita_aclaracion: 'PRESUPUESTO_EN_PESOS'
+      };
+    }
+
     return {
-      presupuesto: matchNumero[1],
-      moneda
+      presupuesto: valor,
+      moneda_presupuesto: moneda || 'DESCONOCIDA',
+      presupuesto_original: valor,
+      necesita_aclaracion: moneda ? null : 'MONEDA_NO_ESPECIFICADA'
     };
   }
 
