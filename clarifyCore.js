@@ -282,19 +282,7 @@ function detectarZonaOCriterio(texto) {
     };
   }
 
- 
-function detectarCondiciones(texto) {
-  const t = normalizar(texto);
-  const condiciones = [];
-
-  if (/cochera|garage|garaje/i.test(t)) condiciones.push('cochera');
-  if (/subterr[aá]nea|subterraneo|subterráneo/i.test(t)) condiciones.push('cochera subterranea');
-  if (/perro|mascota/i.test(t)) condiciones.push('mascotas');
-  if (/patio/i.test(t)) condiciones.push('patio');
-  if (/seguridad|noche|oscuro/i.test(t)) condiciones.push('seguridad');
-  if (/balc[oó]n/i.test(t)) condiciones.push('balcon');
-  if (/terraza/i.test(t)) condiciones.push('terraza');
-  if (/cocina integr  const match = original.match(
+  const match = original.match(
     /(?:en|zona|barrio|por)\s+(.+?)(?:\s+hasta|\s+con|\s+\d|\s+y\s+quiero|$)/i
   );
 
@@ -312,13 +300,28 @@ function detectarCondiciones(texto) {
       criterio_zona: null,
       punto_referencia: null
     };
-  }ada/i.test(t)) condiciones.push('cocina integrada');
-  if (/no quiero duplex|no quiero dúplex|no duplex|no dúplex|que no sea duplex|que no sea dúplex/i.test(t)) condiciones.push('no duplex');
+  }
+
+  return null;
+}
+
+function detectarCondiciones(texto) {
+  const t = normalizar(texto);
+  const condiciones = [];
+
+  if (/cochera|garage|garaje/i.test(t)) condiciones.push('cochera');
+  if (/subterr[aá]nea|subterraneo|subterráneo/i.test(t)) condiciones.push('cochera subterranea');
+  if (/perro|mascota/i.test(t)) condiciones.push('mascotas');
+  if (/patio/i.test(t)) condiciones.push('patio');
+  if (/seguridad|noche|oscuro/i.test(t)) condiciones.push('seguridad');
+  if (/balc[oó]n/i.test(t)) condiciones.push('balcon');
+  if (/terraza/i.test(t)) condiciones.push('terraza');
+  if (/cocina integrada/i.test(t)) condiciones.push('cocina integrada');
+  if (/no quiero duplex|no quiero dúplex|no duplex|no dúplex|que no sea duplex|que no sea dúplex|no me gustan los duplex|no me gustan los dúplex/i.test(t)) condiciones.push('no duplex');
   if (/techo de chapa|sin chapa|que no sea de chapa/i.test(t)) condiciones.push('sin techo de chapa');
 
   return condiciones;
 }
-
 function detectarObservacionExtra(texto, datosDetectados) {
   const t = normalizar(texto);
 
