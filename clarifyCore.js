@@ -15,6 +15,15 @@ function normalizar(texto) {
   return String(texto || "").trim().toLowerCase();
 }
 
+function esEntradaGenerica(mensaje) {
+  const t = normalizar(mensaje);
+
+  return (
+    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|quiero info|quiero informacion)$/i.test(t) ||
+    /(vi un anuncio|vengo del anuncio|me interesa informacion|me interesa info|de que se trata|quiero saber mas|pasame info|pasame informacion)/i.test(t)
+  );
+}
+
 function clasificarIntencion(mensaje) {
   const t = normalizar(mensaje);
 
@@ -70,12 +79,21 @@ function actualizarEstado(mensaje, estadoActual) {
   ].slice(-30);
 
   if (!estado.motivo) {
+    if (esEntradaGenerica(texto)) {
+      return {
+        ...estado,
+        etapa: "motivo",
+        historial
+      };
+    }
+
     estado = {
       ...estado,
       motivo: texto,
       etapa: "intencion",
       historial
     };
+
     return actualizarOrientable(estado);
   }
 
@@ -86,6 +104,7 @@ function actualizarEstado(mensaje, estadoActual) {
       etapa: "presupuesto",
       historial
     };
+
     return actualizarOrientable(estado);
   }
 
@@ -96,6 +115,7 @@ function actualizarEstado(mensaje, estadoActual) {
       etapa: "orientable",
       historial
     };
+
     return actualizarOrientable(estado);
   }
 
@@ -112,7 +132,8 @@ function decidirSiguienteAccion(estado) {
     return {
       respuesta:
         "Hola, soy CasaLista.\n\n" +
-        "Antes de hablar de propiedades, me gustaria entender que te trae hoy por aca.",
+        "Te ayudamos a ordenar una busqueda de propiedad antes de avanzar, para entender que necesitas realmente y no hacerte perder tiempo.\n\n" +
+        "Antes de hablar de opciones, me gustaria entender que te trae hoy por aca.",
       accion: "PREGUNTAR_MOTIVO",
       derivar: false
     };
