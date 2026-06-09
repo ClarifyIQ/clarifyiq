@@ -1,816 +1,150 @@
-const CAMPOS_OBLIGATORIOS = [
-  'tipo_propiedad',
-  'zona_o_criterio',
-  'presupuesto',
-  'dormitorios',
-  'intencion'
-];
+// clarifyCore.js - CasaLista 0.1
 
 function crearEstadoInicial() {
   return {
-    estado_flujo: 'nuevo',
-    leadData: {
-      tipo_propiedad: null,
-      zona_o_criterio: null,
-      presupuesto: null,
-      moneda_presupuesto: null,
-      presupuesto_original: null,
-dormitorios: null,
-cantidad_ambientes: null,
-es_monoambiente: false,
-intencion: null,
-      condiciones_clave: [],
-      observaciones_extra: [],
-      criterio_zona: null,
-      punto_referencia: null,
-      flexibilidad_zona: null
-    },
-    faltantes: [...CAMPOS_OBLIGATORIOS],
-    ordenMinimoLogrado: false,
-    derivar: false,
-    coincidencias_presentadas: 0,
-    validacion_externa: null,
-    necesita_aclaracion: null,
-    pregunta_cliente: null,
-    accion_post_cierre: null,
-    historial_cambios: [],
+    motivo: null,
+    intencion: null,
+    presupuesto: null,
+    etapa: "motivo",
+    orientable: false,
     historial: []
   };
 }
 
 function normalizar(texto) {
-  return String(texto || '').trim().toLowerCase();
+  return String(texto || "").trim().toLowerCase();
 }
 
-function detectarTipo(texto) {
-  const t = normalizar(texto);
-
-  if (/mono\s*ambiente|monoambiente/i.test(t)) {
-    return 'departamento';
-  }
-
-  const tipos = [];
-
-  if (/(departamento|depto|apartamento)/i.test(t)) tipos.push('departamento');
-  if (/(casa|vivienda|chalet)/i.test(t)) tipos.push('casa');
-  if (/(terreno|lote)/i.test(t)) tipos.push('terreno');
-
-  if (tipos.length === 0) return null;
-  if (tipos.length > 1) return tipos.join(' o ');
-  return tipos[0];
-}
-function detectarMoneda(texto) {
-  const t = normalizar(texto);
-
-  if (/(dólares|dolares|usd|u\$s|us\$|dolar|dólar)/i.test(t)) return 'USD';
-  if (/(pesos|ars|peso argentino)/i.test(t)) return 'ARS';
-
-  return null;
-}
-
-function detectarPresupuesto(texto) {
-  const t = normalizar(texto);
-
-  const moneda =
-    /(usd|u\$s|us\$|dolares|dólares|dolar|dólar)/i.test(t)
-      ? 'USD'
-      : /(pesos?|ars|peso argentino)/i.test(t)
-      ? 'ARS'
-      : null;
-
-  const matchMil = t.match(/(\d+)\s*mil/i);
-  if (matchMil) {
-    const valor = String(parseInt(matchMil[1], 10) * 1000);
-
-    if (moneda === 'ARS') {
-      return {
-        presupuesto: null,
-        moneda_presupuesto: 'ARS',
-        presupuesto_original: valor,
-        necesita_aclaracion: 'PRESUPUESTO_EN_PESOS'
-      };
-    }
-
-    return {
-      presupuesto: valor,
-      moneda_presupuesto: moneda || 'DESCONOCIDA',
-      presupuesto_original: valor,
-      necesita_aclaracion: moneda ? null : 'MONEDA_NO_ESPECIFICADA'
-    };
-  }
-
-  const matchNumero = t.match(/\b(\d{4,})\b/);
-  if (matchNumero) {
-    const valor = matchNumero[1];
-
-    if (moneda === 'ARS') {
-      return {
-        presupuesto: null,
-        moneda_presupuesto: 'ARS',
-        presupuesto_original: valor,
-        necesita_aclaracion: 'PRESUPUESTO_EN_PESOS'
-      };
-    }
-
-    return {
-      presupuesto: valor,
-      moneda_presupuesto: moneda || 'DESCONOCIDA',
-      presupuesto_original: valor,
-      necesita_aclaracion: moneda ? null : 'MONEDA_NO_ESPECIFICADA'
-    };
-  }
-
-  return null;
-}
-
-function detectarDormitorios(texto) {
-  const t = normalizar(texto);
-
-  const numerosTexto = {
-    un: '1',
-    uno: '1',
-    una: '1',
-    dos: '2',
-    tres: '3',
-    cuatro: '4',
-    cinco: '5',
-    seis: '6',
-    siete: '7',
-    ocho: '8'
-  };
-
-  const sinonimosDormitorio =
-    '(dormitorios?|dorm|habitaciones?|hab|cuartos?|rec[aá]maras?|piezas?)';
-
-  let match = t.match(
-    new RegExp(`(\\d+)\\s*${sinonimosDormitorio}|${sinonimosDormitorio}\\s*(\\d+)`, 'i')
-  );
-
-  if (match) {
-    return match[1] || match[3];
-  }
-
-  for (const [textoNumero, valor] of Object.entries(numerosTexto)) {
-    const regex = new RegExp(
-      `\\b${textoNumero}\\b\\s*${sinonimosDormitorio}|${sinonimosDormitorio}\\s*\\b${textoNumero}\\b`,
-      'i'
-    );
-
-    if (regex.test(t)) {
-      return valor;
-    }
-  }
-
-  if (/^\d+$/.test(t.trim())) {
-    const n = parseInt(t.trim(), 10);
-    if (n >= 0 && n <= 10) return String(n);
-  }
-
-  return null;
-}
-function detectarIntencion(texto) {
-  const t = normalizar(texto);
+function clasificarIntencion(mensaje) {
+  const t = normalizar(mensaje);
 
   if (
-    /^(sí|si|dale|ok|okay)$/i.test(t) ||
-    /(me interesaría verlo|me interesaria verlo|quiero verlo|me gustaría verlo|me gustaria verlo|avisame|avísame|me sirve|lo quiero ver|verlo|quiero avanzar|avanzar|quiero comprar|comprar ya|necesito comprar|necesito comprar ya|urgente|cuanto antes|listo|visitar|señar)/i.test(t)
+    /^(si|sí|s|ok|dale|claro|obvio)$/i.test(t) ||
+    /(quiero comprar|quiero avanzar|me interesa|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
   ) {
-    return 'ejecucion';
+    return "avanzar";
   }
 
-  if (/(evaluando|comparando|viendo opciones|depende|analizando|todavía lo estoy pensando|todavia lo estoy pensando|lo estoy pensando|juntando información|juntando informacion|estoy juntando información|estoy juntando informacion)/i.test(t)) {
-    return 'evaluacion';
-  }
-
-  if (
-    /(solo viendo|estoy viendo|averiguando|estoy averiguando|por ahora averiguo|sin apuro|más adelante|mas adelante)/i.test(t)
-  ) {
-    return 'exploracion';
-  }
-
-  return null;
+  return "explorando";
 }
 
-function detectarPreguntaDelCliente(texto) {
-  const t = normalizar(texto);
-
-  if (/(cómo va|como va|cómo viene|como viene|novedades|noticias|alguna novedad|alguna noticia|encontraron algo|encontraste algo|apareció algo|aparecio algo|apareció alguna|aparecio alguna|hay algo|hay alguna propiedad|hay alguna opción|hay alguna opcion|encontraron propiedad|encontraron alguna propiedad|sigue activa|estado de la búsqueda|estado de la busqueda|tuvieron suerte)/i.test(t)) {
-    return 'CONSULTA_ESTADO_BUSQUEDA';
-  }
-
-  if (/(qué zonas|que zonas|zonas disponibles|dónde tienen|donde tienen|qué hay disponible|que hay disponible)/i.test(t)) {
-    return 'PREGUNTA_ZONAS_DISPONIBLES';
-  }
-
-  if (/(me llaman|se contactan conmigo|me contactan|ustedes llaman|cómo sigue|como sigue)/i.test(t)) {
-    return 'PREGUNTA_PROCESO';
-  }
-
-  return null;
-}
-
-function detectarZonaOCriterio(texto) {
-  const original = String(texto || '').trim();
-  const t = normalizar(texto);
-
-  if (!original) return null;
-
-  if (detectarPreguntaDelCliente(texto)) return null;
-
-  const cambioZona = original.match(/mejor\s+(.+?)\s+que\s+(.+)/i);
-  if (cambioZona && cambioZona[1]) {
-    return {
-      zona_o_criterio: cambioZona[1].trim(),
-      criterio_zona: null,
-      punto_referencia: null
-    };
-  }
-
-  if (/(plaza|espacio verde|parque)/i.test(t)) {
-    return {
-      zona_o_criterio: 'espacios verdes cercanos',
-      criterio_zona: 'espacios verdes',
-      punto_referencia: null
-    };
-  }
-
-  if (/(cerca de|cerca del|cerca a)/i.test(t)) {
-    let ref = original
-      .replace(/.*cerca (de|del|a)\s*/i, '')
-      .trim();
-
-    ref = ref
-      .split(/[.,;:]/)[0]
-      .replace(/\b(no me|si tiene|sí tiene|tengo|tendría|tendria|aproximadamente|no se|no sé)\b.*$/i, '')
-      .trim();
-
-    return {
-      zona_o_criterio: `cerca de ${ref}`,
-      criterio_zona: 'cercanía',
-      punto_referencia: ref
-    };
-  }
-
-  if (/(zona tranquila|tranquilo|periferia|centro|céntrico|centrico|zona sur|zona norte|zona este|zona oeste|costanera|ruta)/i.test(t)) {
-    return {
-      zona_o_criterio: original,
-      criterio_zona: null,
-      punto_referencia: null
-    };
-  }
-
-  const ciudadesConocidas = [
-    'posadas',
-    'cordoba',
-    'córdoba',
-    'oberá',
-    'obera',
-    'alem',
-    'leandro n alem',
-    'garupá',
-    'garupa',
-    'candelaria',
-    'nueva cordoba',
-    'nueva córdoba'
-  ];
-
-  if (ciudadesConocidas.includes(t)) {
-    return {
-      zona_o_criterio: original,
-      criterio_zona: null,
-      punto_referencia: null
-    };
-  }
-
-  const match = original.match(
-    /(?:en|zona|barrio|por)\s+(.+?)(?:\s+hasta|\s+con|\s+\d|\s+y\s+quiero|$)/i
-  );
-
-  if (match && match[1]) {
-    const zonaDetectada = match[1].trim();
-
-    if (
-      /(realidad|puedo|llegar|presupuesto|pagar|tengo|dólares|dolares|usd|mil)/i.test(zonaDetectada)
-    ) {
-      return null;
-    }
-
-    return {
-      zona_o_criterio: zonaDetectada,
-      criterio_zona: null,
-      punto_referencia: null
-    };
-  }
-
-  return null;
-}
-
-function detectarCondiciones(texto) {
-  const t = normalizar(texto);
-  const condiciones = [];
-
-  if (/cochera|garage|garaje/i.test(t)) condiciones.push('cochera');
-  if (/subterr[aá]nea|subterraneo|subterráneo/i.test(t)) condiciones.push('cochera subterranea');
-  if (/perro|mascota/i.test(t)) condiciones.push('mascotas');
-  if (/patio/i.test(t)) condiciones.push('patio');
-  if (/seguridad|noche|oscuro/i.test(t)) condiciones.push('seguridad');
-  if (/balc[oó]n/i.test(t)) condiciones.push('balcon');
-  if (/terraza/i.test(t)) condiciones.push('terraza');
-  if (/cocina integrada/i.test(t)) condiciones.push('cocina integrada');
-  if (/no quiero duplex|no quiero dúplex|no duplex|no dúplex|que no sea duplex|que no sea dúplex|no me gustan los duplex|no me gustan los dúplex/i.test(t)) condiciones.push('no duplex');
-  if (/techo de chapa|sin chapa|que no sea de chapa/i.test(t)) condiciones.push('sin techo de chapa');
-
-  return condiciones;
-}
-function detectarObservacionExtra(texto, datosDetectados) {
-  const t = normalizar(texto);
-
-  if (!t) return null;
-
-  const tieneCondiciones = datosDetectados.condiciones_clave?.length > 0;
-  const tieneCampoPrincipal =
-    datosDetectados.tipo_propiedad ||
-    datosDetectados.zona_o_criterio ||
-    datosDetectados.presupuesto ||
-    datosDetectados.dormitorios;
-
-  if (datosDetectados.intencion) return null;
-  if (tieneCondiciones && !tieneCampoPrincipal) return texto;
-
-  if (/(también|tambien|además|ademas|quiero|necesito|preferiría|preferiria|me gustaría|me gustaria|mejor|no quiero|evitar|importante)/i.test(t)) {
-    return texto;
-  }
-
-  return null;
-}
-
-function detectarValidacionExterna(texto) {
-  const t = normalizar(texto);
-
-  return /(vi algo|encontr[eé]|me pasaron|me mostraron|vi un aviso|marketplace|zonaprop|publicaci[oó]n)/i.test(
-    t
-  );
-}
-
-function crearCambio(campo, anterior, nuevo) {
-  return {
-    campo,
-    anterior: anterior ?? null,
-    nuevo: nuevo ?? null,
-    fecha: new Date().toISOString()
-  };
-}
-
-function extraerDatos(mensaje, estado) {
-  const datos = {};
-  const faltanteActual = estado.faltantes?.[0];
-
-  const preguntaCliente = detectarPreguntaDelCliente(mensaje);
-  if (preguntaCliente) datos.pregunta_cliente = preguntaCliente;
-
-  const tipo = detectarTipo(mensaje);
-  if (tipo) datos.tipo_propiedad = tipo;
-  if (/mono\s*ambiente|monoambiente/i.test(normalizar(mensaje))) {
-    datos.tipo_propiedad = 'departamento';
-    datos.cantidad_ambientes = '1';
-    datos.es_monoambiente = true;
-    datos.dormitorios = '0';
-  }
-
-  const ambienteMatch = normalizar(mensaje).match(/(\d+)\s*ambientes?/i);
-  if (ambienteMatch && !datos.es_monoambiente) {
-    datos.cantidad_ambientes = ambienteMatch[1];
-  }
-  const zona = detectarZonaOCriterio(mensaje);
-  if (zona) Object.assign(datos, zona);
-
-  const presupuestoDetectado = detectarPresupuesto(mensaje);
-  if (presupuestoDetectado) {
-    if (presupuestoDetectado.presupuesto) datos.presupuesto = presupuestoDetectado.presupuesto;
-    datos.moneda_presupuesto = presupuestoDetectado.moneda_presupuesto;
-    datos.presupuesto_original = presupuestoDetectado.presupuesto_original;
-    if (presupuestoDetectado.necesita_aclaracion) {
-      datos.necesita_aclaracion = presupuestoDetectado.necesita_aclaracion;
-    }
-  }
-
-  const dormitorios = detectarDormitorios(mensaje);
-  if (dormitorios) datos.dormitorios = dormitorios;
-
-  const intencion = detectarIntencion(mensaje);
-  if (intencion) datos.intencion = intencion;
-
-  const condiciones = detectarCondiciones(mensaje);
-  if (condiciones.length > 0) datos.condiciones_clave = condiciones;
-
-  const observacionExtra = detectarObservacionExtra(mensaje, datos);
-  if (observacionExtra) datos.observaciones_extra = [observacionExtra];
-
-  if (faltanteActual && !datos[faltanteActual] && !datos.pregunta_cliente && !datos.necesita_aclaracion) {
-    const hayOtrosDatos = Object.keys(datos).some(
-      k => !['condiciones_clave', 'observaciones_extra'].includes(k)
-    );
-
-    if (!hayOtrosDatos) {
-      if (faltanteActual === 'zona_o_criterio') {
-        datos.zona_o_criterio = mensaje;
-      } else if (faltanteActual === 'presupuesto') {
-        const p = detectarPresupuesto(mensaje);
-        if (p?.presupuesto) {
-          datos.presupuesto = p.presupuesto;
-          datos.moneda_presupuesto = p.moneda_presupuesto;
-          datos.presupuesto_original = p.presupuesto_original;
-        } else if (p?.necesita_aclaracion) {
-          datos.necesita_aclaracion = p.necesita_aclaracion;
-        }
-      } else if (faltanteActual === 'dormitorios') {
-        const dorm = detectarDormitorios(mensaje);
-        if (dorm) datos.dormitorios = dorm;
-      } else if (faltanteActual === 'intencion') {
-        const i = detectarIntencion(mensaje);
-        if (i) datos.intencion = i;
-      }
-    }
-  }
-
-  return datos;
-}
-
-function recalcularFaltantes(leadData) {
-  return CAMPOS_OBLIGATORIOS.filter(campo => {
-    return (
-      leadData[campo] === null ||
-      leadData[campo] === undefined ||
-      leadData[campo] === ''
-    );
-  });
-}
-
-function calcularEstadoFlujo(leadData, faltantes) {
-  if (faltantes.length > 0) return 'filtrando';
-  if (leadData.intencion === 'exploracion') return 'orden_logrado_sin_derivar';
-  if (leadData.intencion === 'evaluacion') return 'orden_logrado_evaluacion';
-  return 'orden_logrado';
-}
-
-function actualizarEstadoPostCierre(mensaje, estado) {
-  const datos = extraerDatos(mensaje, estado);
-  const leadData = { ...estado.leadData };
-  const cambios = [];
-
-  if (datos.pregunta_cliente === 'CONSULTA_ESTADO_BUSQUEDA') {
-    return {
-      ...estado,
-      accion_post_cierre: 'CONSULTA_ESTADO_BUSQUEDA',
-      pregunta_cliente: datos.pregunta_cliente,
-      historial: [
-        ...(estado.historial || []),
-        {
-          evento: 'post_cierre_consulta_estado',
-          mensaje,
-          datos_detectados: datos,
-          estado_flujo: estado.estado_flujo,
-          fecha: new Date().toISOString()
-        }
-      ].slice(-30)
-    };
-  }
-
-  if (datos.necesita_aclaracion) {
-    return {
-      ...estado,
-      necesita_aclaracion: datos.necesita_aclaracion,
-      accion_post_cierre: 'ACLARACION_REQUERIDA',
-      historial: [
-        ...(estado.historial || []),
-        {
-          evento: 'post_cierre_aclaracion_requerida',
-          mensaje,
-          datos_detectados: datos,
-          estado_flujo: estado.estado_flujo,
-          fecha: new Date().toISOString()
-        }
-      ].slice(-30)
-    };
-  }
-
-  if (datos.presupuesto) {
-    cambios.push(crearCambio('presupuesto', leadData.presupuesto, datos.presupuesto));
-    leadData.presupuesto = datos.presupuesto;
-    leadData.moneda_presupuesto = datos.moneda_presupuesto || leadData.moneda_presupuesto;
-    leadData.presupuesto_original = datos.presupuesto_original || datos.presupuesto;
-  }
-
-  if (datos.zona_o_criterio) {
-    cambios.push(crearCambio('zona_o_criterio', leadData.zona_o_criterio, datos.zona_o_criterio));
-    leadData.zona_o_criterio = datos.zona_o_criterio;
-    leadData.criterio_zona = datos.criterio_zona ?? leadData.criterio_zona;
-    leadData.punto_referencia = datos.punto_referencia ?? leadData.punto_referencia;
-  }
-
-  if (datos.condiciones_clave) {
-    leadData.condiciones_clave = [
-      ...new Set([
-        ...(leadData.condiciones_clave || []),
-        ...datos.condiciones_clave
-      ])
-    ];
-  }
-
-  if (datos.observaciones_extra) {
-    leadData.observaciones_extra = [
-      ...new Set([
-        ...(leadData.observaciones_extra || []),
-        ...datos.observaciones_extra
-      ])
-    ];
-  }
-
-  const huboCambioDato = cambios.length > 0;
-  const huboCriterio =
-    (datos.condiciones_clave && datos.condiciones_clave.length > 0) ||
-    (datos.observaciones_extra && datos.observaciones_extra.length > 0);
-
-  let accion_post_cierre = 'ACLARACION_GUARDADA';
-
-  if (huboCambioDato && huboCriterio) {
-    accion_post_cierre = 'DATO_Y_CRITERIO_ACTUALIZADO';
-  } else if (huboCambioDato) {
-    accion_post_cierre = 'DATO_ACTUALIZADO';
-  } else if (huboCriterio) {
-    accion_post_cierre = 'CRITERIO_GUARDADO';
-  } else {
-    leadData.observaciones_extra = [
-      ...new Set([
-        ...(leadData.observaciones_extra || []),
-        mensaje
-      ])
-    ];
-  }
+function actualizarOrientable(estado) {
+  const orientable =
+    estado.motivo !== null &&
+    estado.intencion !== null &&
+    estado.presupuesto !== null;
 
   return {
     ...estado,
-    leadData,
-    accion_post_cierre,
-    necesita_aclaracion: null,
-    pregunta_cliente: null,
-    historial_cambios: [
-      ...(estado.historial_cambios || []),
-      ...cambios
-    ].slice(-50),
-    historial: [
-      ...(estado.historial || []),
-      {
-        evento: 'post_cierre_mensaje_procesado',
-        mensaje,
-        datos_detectados: datos,
-        accion_post_cierre,
-        estado_flujo: estado.estado_flujo,
-        fecha: new Date().toISOString()
-      }
-    ].slice(-30)
+    orientable,
+    etapa: orientable ? "orientable" : estado.etapa
+  };
+}
+
+function asegurarEstadoCasaLista(estadoActual) {
+  if (!estadoActual) return crearEstadoInicial();
+
+  return {
+    motivo: estadoActual.motivo ?? null,
+    intencion: estadoActual.intencion ?? null,
+    presupuesto: estadoActual.presupuesto ?? null,
+    etapa: estadoActual.etapa ?? "motivo",
+    orientable: estadoActual.orientable ?? false,
+    historial: estadoActual.historial ?? []
   };
 }
 
 function actualizarEstado(mensaje, estadoActual) {
-  const estado = estadoActual || crearEstadoInicial();
+  let estado = asegurarEstadoCasaLista(estadoActual);
+  const texto = String(mensaje || "").trim();
 
-  if (
-    estado.ordenMinimoLogrado &&
-    ['orden_logrado', 'orden_logrado_evaluacion', 'orden_logrado_sin_derivar'].includes(estado.estado_flujo)
-  ) {
-    return actualizarEstadoPostCierre(mensaje, estado);
-  }
+  if (!texto) return estado;
 
-  if (detectarValidacionExterna(mensaje)) {
-    return {
-      ...estado,
-      estado_flujo: 'validacion_externa',
-      validacion_externa: {
-        estado: 'pendiente',
-        mensaje_original: mensaje
-      },
-      historial: [
-        ...(estado.historial || []),
-        {
-          evento: 'validacion_externa_detectada',
-          mensaje,
-          fecha: new Date().toISOString()
-        }
-      ].slice(-30)
-    };
-  }
-
-  const datos = extraerDatos(mensaje, estado);
-  const leadData = { ...estado.leadData };
-
-  for (const campo of Object.keys(datos)) {
-    if (campo === 'condiciones_clave') {
-      leadData.condiciones_clave = [
-        ...new Set([
-          ...(leadData.condiciones_clave || []),
-          ...datos.condiciones_clave
-        ])
-      ];
-    } else if (campo === 'observaciones_extra') {
-      leadData.observaciones_extra = [
-        ...new Set([
-          ...(leadData.observaciones_extra || []),
-          ...datos.observaciones_extra
-        ])
-      ];
-    } else if (!['pregunta_cliente', 'necesita_aclaracion'].includes(campo)) {
-      leadData[campo] = datos[campo];
+  const historial = [
+    ...(estado.historial || []),
+    {
+      mensaje: texto,
+      etapa: estado.etapa,
+      fecha: new Date().toISOString()
     }
+  ].slice(-30);
+
+  if (!estado.motivo) {
+    estado = {
+      ...estado,
+      motivo: texto,
+      etapa: "intencion",
+      historial
+    };
+    return actualizarOrientable(estado);
   }
 
-  const faltantes = recalcularFaltantes(leadData);
-  const ordenMinimoLogrado = faltantes.length === 0;
-  const estado_flujo = calcularEstadoFlujo(leadData, faltantes);
+  if (!estado.intencion) {
+    estado = {
+      ...estado,
+      intencion: clasificarIntencion(texto),
+      etapa: "presupuesto",
+      historial
+    };
+    return actualizarOrientable(estado);
+  }
 
-  return {
+  if (!estado.presupuesto) {
+    estado = {
+      ...estado,
+      presupuesto: texto,
+      etapa: "orientable",
+      historial
+    };
+    return actualizarOrientable(estado);
+  }
+
+  estado = {
     ...estado,
-    leadData,
-    faltantes,
-    ordenMinimoLogrado,
-    estado_flujo,
-    derivar: estado_flujo === 'orden_logrado',
-    necesita_aclaracion: datos.necesita_aclaracion || null,
-    pregunta_cliente: datos.pregunta_cliente || null,
-    accion_post_cierre: null,
-    historial_cambios: estado.historial_cambios || [],
-    historial: [
-      ...(estado.historial || []),
-      {
-        evento: 'mensaje_procesado',
-        mensaje,
-        datos_detectados: datos,
-        estado_flujo,
-        fecha: new Date().toISOString()
-      }
-    ].slice(-30)
-  };
-}
-
-function preguntaPorCampo(campo, estado) {
-  const yaTieneHistorial = (estado.historial || []).length > 1;
-
-  if (campo === 'tipo_propiedad' && !yaTieneHistorial) {
-    return (
-      'Hola, soy CasaLista.\n\n' +
-      'Te voy a hacer unas preguntas cortas para ordenar tu búsqueda. ' +
-      'Cuanto más clara sea tu respuesta, mejor puedo filtrar opciones que encajen.\n\n' +
-      'Primero: ¿buscás casa, departamento o terreno?'
-    );
-  }
-
-  const preguntas = {
-    tipo_propiedad:
-      '¿Buscás casa, departamento o terreno?',
-    zona_o_criterio:
-      '¿En qué zona te interesa o necesitás estar cerca de algo?',
-    presupuesto:
-      '¿Con qué presupuesto aproximado en dólares querés trabajar?',
-    dormitorios:
-      '¿Cuántos dormitorios necesitás?',
-    intencion:
-      'Si aparece algo que encaje con tu búsqueda, ¿te interesaría verlo o todavía estás juntando información?'
+    historial
   };
 
-  return preguntas[campo] || 'Necesito un dato más para ordenar la búsqueda.';
-}
-
-function respuestaCierreOrdenLogrado() {
-  return (
-    'Perfecto.\n\n' +
-    'La búsqueda quedó ordenada y lista para trabajar.\n\n' +
-    'Si recordás algún detalle importante que te gustaría conseguir o evitar en la propiedad, podés escribirlo cuando quieras y lo incorporamos a la búsqueda.\n\n' +
-    'Si encontramos opciones que encajen con estos criterios, nos pondremos en contacto con vos.'
-  );
+  return actualizarOrientable(estado);
 }
 
 function decidirSiguienteAccion(estado) {
-  if (estado.accion_post_cierre === 'CONSULTA_ESTADO_BUSQUEDA') {
+  if (!estado.motivo) {
     return {
       respuesta:
-        'Seguimos trabajando sobre la búsqueda.\n\n' +
-        'Por el momento no apareció una opción que justifique contactarte, pero si encontramos algo que realmente encaje con tus criterios nos pondremos en contacto con vos.',
-      accion: 'CONSULTA_ESTADO_BUSQUEDA',
+        "Hola, soy CasaLista.\n\n" +
+        "Antes de hablar de propiedades, me gustaria entender que te trae hoy por aca.",
+      accion: "PREGUNTAR_MOTIVO",
       derivar: false
     };
   }
 
-  if (estado.accion_post_cierre === 'DATO_Y_CRITERIO_ACTUALIZADO') {
+  if (!estado.intencion) {
     return {
       respuesta:
-        'Perfecto, actualicé la información de tu búsqueda y registré los nuevos criterios.',
-      accion: 'DATO_Y_CRITERIO_ACTUALIZADO',
-      derivar: true
-    };
-  }
-
-  if (estado.accion_post_cierre === 'DATO_ACTUALIZADO') {
-    return {
-      respuesta:
-        'Perfecto, actualicé la información de tu búsqueda.',
-      accion: 'DATO_ACTUALIZADO',
-      derivar: true
-    };
-  }
-
-  if (estado.accion_post_cierre === 'CRITERIO_GUARDADO') {
-    return {
-      respuesta:
-        'Perfecto, incorporé ese criterio a tu búsqueda.',
-      accion: 'CRITERIO_GUARDADO',
-      derivar: true
-    };
-  }
-
-  if (estado.accion_post_cierre === 'ACLARACION_GUARDADA') {
-    return {
-      respuesta:
-        'Perfecto, dejé registrada tu aclaración en la búsqueda.',
-      accion: 'ACLARACION_GUARDADA',
-      derivar: true
-    };
-  }
-
-  if (estado.estado_flujo === 'validacion_externa') {
-    return {
-      respuesta: 'Pasámelo y lo revisamos antes de que avances.',
-      accion: 'VALIDACION_EXTERNA',
+        "Entiendo.\n\n" +
+        "Si apareciera una opcion que tenga sentido para vos, estarias pensando en avanzar o por ahora estas explorando posibilidades?",
+      accion: "PREGUNTAR_INTENCION",
       derivar: false
     };
   }
 
-  if (estado.necesita_aclaracion === 'PRESUPUESTO_EN_PESOS') {
+  if (!estado.presupuesto) {
     return {
       respuesta:
-        'Para ordenar bien la búsqueda, ¿me podés pasar ese presupuesto aproximado en dólares?',
-      accion: 'ACLARAR_PRESUPUESTO_DOLARES',
-      derivar: false
-    };
-  }
-
-  if (estado.necesita_aclaracion === 'MONEDA_NO_ESPECIFICADA') {
-    return {
-      respuesta:
-        '¿Ese presupuesto es en dólares? Para ordenar bien la búsqueda necesito tomarlo en USD.',
-      accion: 'ACLARAR_MONEDA_PRESUPUESTO',
-      derivar: false
-    };
-  }
-
-  if (estado.pregunta_cliente === 'PREGUNTA_ZONAS_DISPONIBLES') {
-    return {
-      respuesta:
-        'Primero ordenamos tu búsqueda y después vemos qué zonas pueden encajar. ¿Preferís centro, periferia, zona tranquila o estar cerca de algún punto?',
-      accion: 'RESPONDER_PREGUNTA_ZONA_Y_REPREGUNTAR',
-      derivar: false
-    };
-  }
-
-  if (estado.pregunta_cliente === 'PREGUNTA_PROCESO') {
-    return {
-      respuesta:
-        'Primero ordeno tu búsqueda con unos datos básicos. Después, si encaja, se puede avanzar con el contacto correspondiente. Sigamos: ' +
-        preguntaPorCampo(estado.faltantes[0], estado),
-      accion: 'RESPONDER_PROCESO_Y_REPREGUNTAR',
-      derivar: false
-    };
-  }
-
-  if (!estado.ordenMinimoLogrado) {
-    const campo = estado.faltantes[0];
-
-    return {
-      respuesta: preguntaPorCampo(campo, estado),
-      accion: 'PREGUNTAR_FALTANTE',
-      derivar: false
-    };
-  }
-
-  if (estado.estado_flujo === 'orden_logrado_sin_derivar') {
-    return {
-      respuesta: respuestaCierreOrdenLogrado(),
-      accion: 'ORDEN_LOGRADO_SIN_DERIVAR',
-      derivar: false
-    };
-  }
-
-  if (estado.estado_flujo === 'orden_logrado_evaluacion') {
-    return {
-      respuesta: respuestaCierreOrdenLogrado(),
-      accion: 'ORDEN_LOGRADO_EVALUACION',
+        "Bien.\n\n" +
+        "Para tener una referencia razonable, en que rango de presupuesto te sentirias comodo trabajando?",
+      accion: "PREGUNTAR_PRESUPUESTO",
       derivar: false
     };
   }
 
   return {
-    respuesta: respuestaCierreOrdenLogrado(),
-    accion: 'ORDEN_LOGRADO',
-    derivar: true
+    respuesta:
+      "Gracias por contarmelo.\n\n" +
+      "Con lo que me compartiste ya puedo dejar la busqueda encaminada con un criterio claro.\n\n" +
+      "Si encontramos opciones que encajen con lo que estas buscando, nos vamos a poner en contacto con vos.",
+    accion: "ORIENTABLE",
+    derivar: estado.intencion === "avanzar"
   };
 }
 
