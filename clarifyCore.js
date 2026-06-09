@@ -1,4 +1,4 @@
-// clarifyCore.js - CasaLista 0.1.6
+// clarifyCore.js - CasaLista 0.1.7
 
 function crearEstadoInicial() {
   return {
@@ -15,7 +15,12 @@ function crearEstadoInicial() {
 }
 
 function normalizar(texto) {
-  return String(texto || "").trim().toLowerCase();
+  return String(texto || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[¿?¡!.,;:]/g, "");
 }
 
 function esEntradaGenerica(mensaje) {
@@ -31,14 +36,14 @@ function detectarIntencionSimple(mensaje) {
   const t = normalizar(mensaje);
 
   if (
-    /^(si|sí|s|ok|dale|claro|obvio)$/i.test(t) ||
-    /(quiero comprar|quiero avanzar|me interesa|me interesaria|me interesaría|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
+    /^(si|s|ok|dale|claro|obvio)$/i.test(t) ||
+    /(quiero comprar|quiero avanzar|me interesa|me interesaria|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
   ) {
     return "avanzar";
   }
 
   if (
-    /(estoy mirando|estoy averiguando|por ahora averiguo|solo estoy viendo|mas adelante|más adelante|todavia no|todavía no|tal vez|depende|no se|no sé|segun que aparezca|según qué aparezca)/i.test(t)
+    /(estoy mirando|estoy averiguando|por ahora averiguo|solo estoy viendo|mas adelante|todavia no|tal vez|depende|no se|segun que aparezca)/i.test(t)
   ) {
     return "explorando";
   }
@@ -55,7 +60,7 @@ function detectarPresupuestoSimple(mensaje) {
   const t = normalizar(texto);
 
   if (
-    /(dolar|dólar|dolares|dólares|usd|u\$s|us\$|verdes)/i.test(t) &&
+    /(dolar|dolares|usd|u\$s|us\$|verdes)/i.test(t) &&
     /(\d+|mil|lucas|k)/i.test(t)
   ) {
     return texto;
@@ -75,7 +80,10 @@ function detectarPresupuestoSimple(mensaje) {
 function esConsultaEstado(mensaje) {
   const t = normalizar(mensaje);
 
-  return /(como va|como viene|hay novedades|alguna novedad|encontraron algo|aparecio algo|apareció algo|hay algo|sigue activa|estado de la busqueda|estado de la búsqueda)/i.test(t);
+  return (
+    /(como va|como viene|hay novedades|alguna novedad|encontraron algo|aparecio algo|hay algo|sigue activa|estado de la busqueda)/i.test(t) ||
+    /(que novedades|que hay|ya hay algo|alguna opcion|alguna propiedad)/i.test(t)
+  );
 }
 
 function actualizarOrientable(estado) {
