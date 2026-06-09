@@ -1,4 +1,4 @@
-// clarifyCore.js - CasaLista 0.1.5
+// clarifyCore.js - CasaLista 0.1.6
 
 function crearEstadoInicial() {
   return {
@@ -27,17 +27,49 @@ function esEntradaGenerica(mensaje) {
   );
 }
 
-function clasificarIntencion(mensaje) {
+function detectarIntencionSimple(mensaje) {
   const t = normalizar(mensaje);
 
   if (
     /^(si|sí|s|ok|dale|claro|obvio)$/i.test(t) ||
-    /(quiero comprar|quiero avanzar|me interesa|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
+    /(quiero comprar|quiero avanzar|me interesa|me interesaria|me interesaría|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
   ) {
     return "avanzar";
   }
 
-  return "explorando";
+  if (
+    /(estoy mirando|estoy averiguando|por ahora averiguo|solo estoy viendo|mas adelante|más adelante|todavia no|todavía no|tal vez|depende|no se|no sé|segun que aparezca|según qué aparezca)/i.test(t)
+  ) {
+    return "explorando";
+  }
+
+  return null;
+}
+
+function clasificarIntencion(mensaje) {
+  return detectarIntencionSimple(mensaje) || "explorando";
+}
+
+function detectarPresupuestoSimple(mensaje) {
+  const texto = String(mensaje || "").trim();
+  const t = normalizar(texto);
+
+  if (
+    /(dolar|dólar|dolares|dólares|usd|u\$s|us\$|verdes)/i.test(t) &&
+    /(\d+|mil|lucas|k)/i.test(t)
+  ) {
+    return texto;
+  }
+
+  if (/\b\d{5,}\b/.test(t)) {
+    return texto;
+  }
+
+  if (/\b\d+\s*(mil|k|lucas)\b/i.test(t)) {
+    return texto;
+  }
+
+  return null;
 }
 
 function esConsultaEstado(mensaje) {
@@ -116,15 +148,27 @@ function actualizarEstado(mensaje, estadoActual) {
       };
     }
 
+    const intencionDetectada = detectarIntencionSimple(texto);
+    const presupuestoDetectado = detectarPresupuestoSimple(texto);
+
     estado = {
       ...estado,
       motivo: texto,
+      intencion: intencionDetectada,
+      presupuesto: presupuestoDetectado,
       etapa: "intencion",
       historial,
       ultimaAccionEstado: "MOTIVO_RECIBIDO"
     };
 
-    return actualizarOrientable(estado);
+    estado = actualizarOrientable(estado);
+
+    if (!estado.orientable) {
+      if (!estado.intencion) estado.etapa = "intencion";
+      else if (!estado.presupuesto) estado.etapa = "presupuesto";
+    }
+
+    return estado;
   }
 
   if (!estado.intencion) {
