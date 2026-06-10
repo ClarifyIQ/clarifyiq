@@ -226,8 +226,9 @@ function decidirSiguienteAccion(estado) {
   if (estado.ultimaAccionEstado === "POST_ORIENTABLE_CONSULTA_ESTADO") {
     return {
       respuesta:
-        "La busqueda sigue encaminada.\n\n" +
-        "Si aparece una opcion que tenga sentido con lo que venimos conversando, nos vamos a poner en contacto con vos.",
+        "La busqueda sigue activa.\n\n" +
+"Todavia no aparecio una opcion que encaje con lo que estas buscando.\n\n" +
+"Cuando aparezca algo que valga la pena, nos vamos a comunicar con vos."
       accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
       derivar: false
     };
@@ -244,9 +245,9 @@ function decidirSiguienteAccion(estado) {
   if (!estado.motivo) {
     return {
       respuesta:
-        "Hola, soy CasaLista.\n\n" +
-        "Te ayudamos a ordenar una busqueda de propiedad antes de avanzar, para entender que necesitas realmente y no hacerte perder tiempo.\n\n" +
-        "Antes de hablar de opciones, me gustaria entender que te trae hoy por aca.",
+       "Hola, soy CasaLista.\n\n" +
+"Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
+"Contame un poco que estas buscando."
       accion: "PREGUNTAR_MOTIVO",
       derivar: false
     };
