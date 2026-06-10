@@ -225,13 +225,12 @@ function respuestaPostOrientableDetalle(estado) {
 function decidirSiguienteAccion(estado) {
   if (estado.ultimaAccionEstado === "POST_ORIENTABLE_CONSULTA_ESTADO") {
     return {
-     
       respuesta:
-  "La busqueda sigue activa.\n\n" +
-  "Todavia no aparecio una opcion que encaje con lo que estas buscando.\n\n" +
-  "Cuando aparezca algo que valga la pena, nos vamos a comunicar con vos.",
-accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
-derivar: false
+        "Ya tenemos una base para trabajar tu busqueda.\n\n" +
+        "Si aparece una oportunidad que tenga sentido para vos, nos vamos a comunicar.\n\n" +
+        "De todas formas, podes escribir cuando quieras para agregar informacion o consultar novedades.",
+      accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
+      derivar: false
     };
   }
 
@@ -245,12 +244,13 @@ derivar: false
 
   if (!estado.motivo) {
     return {
-     respuesta:
-  "Hola, soy CasaLista.\n\n" +
-  "Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
-  "Contame un poco que estas buscando.",
-accion: "PREGUNTAR_MOTIVO",
-derivar: false
+      respuesta:
+        "Hola, soy CasaLista.\n\n" +
+        "Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
+        "La idea es entender bien que necesitas para acompanarte durante la busqueda.\n\n" +
+        "Contame un poco que estas buscando.",
+      accion: "PREGUNTAR_MOTIVO",
+      derivar: false
     };
   }
 
@@ -276,15 +276,13 @@ derivar: false
 
   return {
     respuesta:
-      "Gracias por contarmelo.\n\n" +
-      "Entiendo. Con lo que me compartiste ya puedo dejar la busqueda encaminada con un criterio claro.\n\n" +
-      "Si queres, tambien podes contarme que te gustaria encontrar o evitar en una propiedad: zona, dormitorios, cochera, balcon o cualquier detalle importante.\n\n" +
-      "Y si mas adelante recordas algo o queres saber como viene la busqueda, podes escribirme por aca y seguimos desde donde dejamos.",
+      "Perfecto.\n\n" +
+      "Ya tenemos una base para empezar.\n\n" +
+      "Si hay algo que consideres importante encontrar o evitar en una propiedad, vale la pena tenerlo en cuenta desde el principio.",
     accion: "ORIENTABLE",
     derivar: estado.intencion === "avanzar"
   };
 }
-
 module.exports = {
   crearEstadoInicial,
   actualizarEstado,
