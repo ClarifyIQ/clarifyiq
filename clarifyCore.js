@@ -225,12 +225,13 @@ function respuestaPostOrientableDetalle(estado) {
 function decidirSiguienteAccion(estado) {
   if (estado.ultimaAccionEstado === "POST_ORIENTABLE_CONSULTA_ESTADO") {
     return {
+     
       respuesta:
-        "La busqueda sigue activa.\n\n" +
-"Todavia no aparecio una opcion que encaje con lo que estas buscando.\n\n" +
-"Cuando aparezca algo que valga la pena, nos vamos a comunicar con vos."
-      accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
-      derivar: false
+  "La busqueda sigue activa.\n\n" +
+  "Todavia no aparecio una opcion que encaje con lo que estas buscando.\n\n" +
+  "Cuando aparezca algo que valga la pena, nos vamos a comunicar con vos.",
+accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
+derivar: false
     };
   }
 
@@ -244,12 +245,12 @@ function decidirSiguienteAccion(estado) {
 
   if (!estado.motivo) {
     return {
-      respuesta:
-       "Hola, soy CasaLista.\n\n" +
-"Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
-"Contame un poco que estas buscando."
-      accion: "PREGUNTAR_MOTIVO",
-      derivar: false
+     respuesta:
+  "Hola, soy CasaLista.\n\n" +
+  "Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
+  "Contame un poco que estas buscando.",
+accion: "PREGUNTAR_MOTIVO",
+derivar: false
     };
   }
 
