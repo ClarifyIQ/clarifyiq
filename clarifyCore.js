@@ -1,4 +1,4 @@
-// clarifyCore.js - CasaLista 0.1.7
+// clarifyCore.js - CasaLista V1 = memoria útil por teléfono
 
 function crearEstadoInicial() {
   return {
@@ -9,7 +9,6 @@ function crearEstadoInicial() {
     orientable: false,
     historial: [],
     preferencias: [],
-    postOrientableCount: 0,
     ultimaAccionEstado: null
   };
 }
@@ -37,7 +36,7 @@ function detectarIntencionSimple(mensaje) {
 
   if (
     /^(si|s|ok|dale|claro|obvio)$/i.test(t) ||
-    /(quiero comprar|quiero avanzar|me interesa|me interesaria|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar)/i.test(t)
+    /(quiero comprar|quiero avanzar|me interesa|me interesaria|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar|coordinar una visita|verla|ir a verla|visitar)/i.test(t)
   ) {
     return "avanzar";
   }
@@ -86,6 +85,53 @@ function esConsultaEstado(mensaje) {
   );
 }
 
+function detectarCambioSimple(mensaje, estado) {
+  const t = normalizar(mensaje);
+  const cambios = [];
+
+  if (/(departamento|depto|dpto|departamentos)/i.test(t)) {
+    cambios.push("ahora también aceptarías departamentos");
+  }
+
+  if (/(casa|casas)/i.test(t) && estado.motivo && !normalizar(estado.motivo).includes("casa")) {
+    cambios.push("ahora también mencionás casa");
+  }
+
+  if (/(terreno|lote|lotes)/i.test(t)) {
+    cambios.push("ahora también mencionás terreno o lote");
+  }
+
+  const nuevoPresupuesto = detectarPresupuestoSimple(mensaje);
+  if (nuevoPresupuesto && nuevoPresupuesto !== estado.presupuesto) {
+    cambios.push(`actualizás presupuesto a ${nuevoPresupuesto}`);
+  }
+
+  if (/(zona norte|zona sur|zona centro|nueva cordoba|general paz|alberdi|guemes|alta cordoba|arguello|villa belgrano)/i.test(t)) {
+    cambios.push(`agregás o modificás zona: ${mensaje}`);
+  }
+
+  if (/(balcon|cochera|patio|pileta|terraza|quincho|jardin|dos dormitorios|2 dormitorios|tres dormitorios|3 dormitorios)/i.test(t)) {
+    cambios.push(`agregás preferencia: ${mensaje}`);
+  }
+
+  if (cambios.length === 0) {
+    cambios.push(`agregás este dato: ${mensaje}`);
+  }
+
+  return cambios.join(". ");
+}
+
+function resumenEstado(estado) {
+  const partes = [];
+
+  if (estado.motivo) partes.push(estado.motivo);
+  if (estado.presupuesto) partes.push(`presupuesto cercano a ${estado.presupuesto}`);
+
+  if (partes.length === 0) return "teníamos una búsqueda iniciada";
+
+  return partes.join(", ");
+}
+
 function actualizarOrientable(estado) {
   const orientable =
     estado.motivo !== null &&
@@ -110,8 +156,8 @@ function asegurarEstadoCasaLista(estadoActual) {
     orientable: estadoActual.orientable ?? false,
     historial: estadoActual.historial ?? [],
     preferencias: estadoActual.preferencias ?? [],
-    postOrientableCount: estadoActual.postOrientableCount ?? 0,
-    ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? null
+    ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? null,
+    ultimoCambioDetectado: estadoActual.ultimoCambioDetectado ?? null
   };
 }
 
@@ -121,28 +167,32 @@ function actualizarEstado(mensaje, estadoActual) {
 
   if (!texto) return estado;
 
-  const historial = [
+  const historialBase = [
     ...(estado.historial || []),
     {
       mensaje: texto,
       etapa: estado.etapa,
       fecha: new Date().toISOString()
     }
-  ].slice(-30);
+  ].slice(-50);
 
   if (estado.orientable) {
     const consultaEstado = esConsultaEstado(texto);
+    const cambio = consultaEstado ? null : detectarCambioSimple(texto, estado);
+
+    const nuevoPresupuesto = detectarPresupuestoSimple(texto);
 
     return {
       ...estado,
-      historial,
+      presupuesto: nuevoPresupuesto || estado.presupuesto,
+      historial: historialBase,
       preferencias: consultaEstado
         ? estado.preferencias
-        : [...(estado.preferencias || []), texto].slice(-30),
-      postOrientableCount: (estado.postOrientableCount || 0) + 1,
+        : [...(estado.preferencias || []), texto].slice(-50),
       ultimaAccionEstado: consultaEstado
         ? "POST_ORIENTABLE_CONSULTA_ESTADO"
-        : "POST_ORIENTABLE_DETALLE"
+        : "POST_ORIENTABLE_DETALLE",
+      ultimoCambioDetectado: cambio
     };
   }
 
@@ -151,7 +201,7 @@ function actualizarEstado(mensaje, estadoActual) {
       return {
         ...estado,
         etapa: "motivo",
-        historial,
+        historial: historialBase,
         ultimaAccionEstado: "ENTRADA_GENERICA"
       };
     }
@@ -165,7 +215,7 @@ function actualizarEstado(mensaje, estadoActual) {
       intencion: intencionDetectada,
       presupuesto: presupuestoDetectado,
       etapa: "intencion",
-      historial,
+      historial: historialBase,
       ultimaAccionEstado: "MOTIVO_RECIBIDO"
     };
 
@@ -184,7 +234,7 @@ function actualizarEstado(mensaje, estadoActual) {
       ...estado,
       intencion: clasificarIntencion(texto),
       etapa: "presupuesto",
-      historial,
+      historial: historialBase,
       ultimaAccionEstado: "INTENCION_RECIBIDA"
     };
 
@@ -196,7 +246,7 @@ function actualizarEstado(mensaje, estadoActual) {
       ...estado,
       presupuesto: texto,
       etapa: "orientable",
-      historial,
+      historial: historialBase,
       ultimaAccionEstado: "CIERRE_ORIENTABLE"
     };
 
@@ -205,30 +255,17 @@ function actualizarEstado(mensaje, estadoActual) {
 
   return actualizarOrientable({
     ...estado,
-    historial
+    historial: historialBase
   });
-}
-
-function respuestaPostOrientableDetalle(estado) {
-  const n = estado.postOrientableCount || 0;
-
-  const respuestas = [
-    "Entiendo.\n\nSeguimos tomando esos detalles para orientar mejor la busqueda.",
-    "Perfecto.\n\nEse tipo de detalle ayuda a ajustar mejor el criterio con el que venimos trabajando.",
-    "Bien, lo tenemos en cuenta dentro de lo que venimos conversando.\n\nPodes seguir agregando o corrigiendo detalles cuando quieras.",
-    "Entendido.\n\nLa idea es ir afinando la busqueda con lo que vayas recordando, sin empezar de cero cada vez."
-  ];
-
-  return respuestas[n % respuestas.length];
 }
 
 function decidirSiguienteAccion(estado) {
   if (estado.ultimaAccionEstado === "POST_ORIENTABLE_CONSULTA_ESTADO") {
     return {
       respuesta:
-        "Ya tenemos una base para trabajar tu busqueda.\n\n" +
-        "Si aparece una oportunidad que tenga sentido para vos, nos vamos a comunicar.\n\n" +
-        "De todas formas, podes escribir cuando quieras para agregar informacion o consultar novedades.",
+        "Tenemos tu búsqueda registrada.\n\n" +
+        `Hasta ahora veníamos trabajando con esto: ${resumenEstado(estado)}.\n\n` +
+        "Si aparece una opción compatible, nos vamos a comunicar. También podés avisarnos si cambia tu presupuesto, zona o preferencias.",
       accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
       derivar: false
     };
@@ -236,7 +273,9 @@ function decidirSiguienteAccion(estado) {
 
   if (estado.ultimaAccionEstado === "POST_ORIENTABLE_DETALLE") {
     return {
-      respuesta: respuestaPostOrientableDetalle(estado),
+      respuesta:
+        `Perfecto. Teníamos registrado que buscabas ${resumenEstado(estado)}.\n\n` +
+        `Actualizo tu búsqueda: ${estado.ultimoCambioDetectado}.`,
       accion: "POST_ORIENTABLE_DETALLE",
       derivar: false
     };
@@ -246,9 +285,8 @@ function decidirSiguienteAccion(estado) {
     return {
       respuesta:
         "Hola, soy CasaLista.\n\n" +
-        "Te ayudamos a encontrar lo que estas buscando, sin hacerte perder tiempo.\n\n" +
-        "La idea es entender bien que necesitas para acompanarte durante la busqueda.\n\n" +
-        "Contame un poco que estas buscando.",
+        "Te ayudamos a encontrar lo que estás buscando.\n\n" +
+        "Me podés describir qué te interesaría conseguir o evitar en una propiedad.",
       accion: "PREGUNTAR_MOTIVO",
       derivar: false
     };
@@ -257,8 +295,8 @@ function decidirSiguienteAccion(estado) {
   if (!estado.intencion) {
     return {
       respuesta:
-        "Entiendo.\n\n" +
-        "Si apareciera una opcion que tenga sentido para vos, estarias pensando en avanzar o por ahora estas explorando posibilidades?",
+        "Bien.\n\n" +
+        "Si aparece algo según tus preferencias, ¿podríamos coordinar una visita?",
       accion: "PREGUNTAR_INTENCION",
       derivar: false
     };
@@ -267,8 +305,8 @@ function decidirSiguienteAccion(estado) {
   if (!estado.presupuesto) {
     return {
       respuesta:
-        "Bien.\n\n" +
-        "Para tener una referencia razonable, en que rango de presupuesto te sentirias comodo trabajando?",
+        "Perfecto.\n\n" +
+        "Para optimizar tu búsqueda, ¿de cuánto capital aproximado contás?",
       accion: "PREGUNTAR_PRESUPUESTO",
       derivar: false
     };
@@ -276,13 +314,13 @@ function decidirSiguienteAccion(estado) {
 
   return {
     respuesta:
-      "Perfecto.\n\n" +
-      "Ya tenemos una base para empezar.\n\n" +
-      "Si hay algo que consideres importante encontrar o evitar en una propiedad, vale la pena tenerlo en cuenta desde el principio.",
+      "Perfecto, ya registramos tu búsqueda y vamos a empezar a revisar opciones compatibles.\n\n" +
+      "Si en algún momento recordás un dato relevante o cambia algo —zona, presupuesto, tipo de propiedad o preferencias— podés escribirnos cuando quieras. Cada información nueva actualiza la búsqueda.",
     accion: "ORIENTABLE",
     derivar: estado.intencion === "avanzar"
   };
 }
+
 module.exports = {
   crearEstadoInicial,
   actualizarEstado,
