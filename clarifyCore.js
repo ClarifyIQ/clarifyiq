@@ -1,15 +1,68 @@
-// clarifyCore.js - CasaLista V1 = memoria útil por teléfono
+// clarifyCore.js
+// CasaLista V1 = conservar información + seleccionar respuesta segura
+// Interfaz conservada:
+// actualizarEstado(mensaje, estadoActual)
+// decidirSiguienteAccion(estado)
+
+const RESPUESTAS = {
+  SALUDO_PEDIR_BUSQUEDA: [
+    "Hola, soy CasaLista.\n\nEstamos para ayudarte y acompañarte durante la búsqueda de tu próxima propiedad.\n\nContame qué te gustaría encontrar o qué te gustaría evitar en una propiedad."
+  ],
+
+  PREGUNTAR_INTENCION: [
+    "Bien.\n\nSi aparece una opción que tenga sentido para vos, ¿podríamos coordinar una visita?"
+  ],
+
+  PREGUNTAR_CAPITAL: [
+    "Perfecto.\n\nPara optimizar tu búsqueda, ¿de cuánto capital aproximado contás?"
+  ],
+
+  MENSAJE_REGISTRABLE: [
+    "Perfecto, quedó registrado.\n\nCualquier cambio o dato nuevo que quieras sumar, podés escribirnos cuando quieras.",
+    "Bien, lo dejamos anotado.\n\nSi más adelante querés agregar o modificar algo, podés hacerlo por acá.",
+    "Entendido, quedó registrado.\n\nSeguimos teniendo en cuenta la información que vayas sumando.",
+    "Gracias, lo registramos para considerarlo dentro de la búsqueda."
+  ],
+
+  CONSULTA_ESTADO: [
+    "Tu búsqueda sigue registrada.\n\nPara no hacerte perder tiempo, sólo nos comunicamos cuando aparece algún indicio compatible con lo que estás buscando.",
+    "Seguimos teniendo en cuenta tu búsqueda.\n\nNi bien aparezca una oportunidad compatible, nos vamos a comunicar.",
+    "Por el momento no tenemos novedades concretas para compartir.\n\nSi aparece algo que tenga sentido para vos, te vamos a escribir."
+  ],
+
+  REQUIERE_OPERADOR: [
+    "Gracias, quedó registrado.\n\nPara responderte correctamente, este mensaje requiere revisión de un operador.",
+    "Tu consulta quedó registrada.\n\nUn operador la va a revisar para darte una respuesta adecuada.",
+    "Gracias por escribirnos.\n\nEste tema requiere revisión manual de nuestro equipo."
+  ]
+};
+
+function elegir(categoria, estado) {
+  const lista = RESPUESTAS[categoria] || RESPUESTAS.REQUIERE_OPERADOR;
+  const n = estado?.contadorRespuestas || 0;
+  return lista[n % lista.length];
+}
 
 function crearEstadoInicial() {
   return {
     motivo: null,
     intencion: null,
     presupuesto: null,
-    etapa: "motivo",
+
+    tieneIntencion: false,
+    tieneCapital: false,
     orientable: false,
+
+    etapa: "motivo",
     historial: [],
     preferencias: [],
-    ultimaAccionEstado: null
+
+    ultimaAccionEstado: null,
+    requiereOperador: false,
+    contadorRespuestas: 0,
+
+    creadoEn: new Date().toISOString(),
+    actualizadoEn: new Date().toISOString()
   };
 }
 
@@ -18,131 +71,7 @@ function normalizar(texto) {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[¿?¡!.,;:]/g, "");
-}
-
-function esEntradaGenerica(mensaje) {
-  const t = normalizar(mensaje);
-
-  return (
-    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|quiero info|quiero informacion)$/i.test(t) ||
-    /(vi un anuncio|vengo del anuncio|me interesa informacion|me interesa info|de que se trata|quiero saber mas|pasame info|pasame informacion)/i.test(t)
-  );
-}
-
-function detectarIntencionSimple(mensaje) {
-  const t = normalizar(mensaje);
-
-  if (
-    /^(si|s|ok|dale|claro|obvio)$/i.test(t) ||
-    /(quiero comprar|quiero avanzar|me interesa|me interesaria|aparece algo bueno|aparece algo adecuado|tenga sentido|avanzar|coordinar una visita|verla|ir a verla|visitar)/i.test(t)
-  ) {
-    return "avanzar";
-  }
-
-  if (
-    /(estoy mirando|estoy averiguando|por ahora averiguo|solo estoy viendo|mas adelante|todavia no|tal vez|depende|no se|segun que aparezca)/i.test(t)
-  ) {
-    return "explorando";
-  }
-
-  return null;
-}
-
-function clasificarIntencion(mensaje) {
-  return detectarIntencionSimple(mensaje) || "explorando";
-}
-
-function detectarPresupuestoSimple(mensaje) {
-  const texto = String(mensaje || "").trim();
-  const t = normalizar(texto);
-
-  if (
-    /(dolar|dolares|usd|u\$s|us\$|verdes)/i.test(t) &&
-    /(\d+|mil|lucas|k)/i.test(t)
-  ) {
-    return texto;
-  }
-
-  if (/\b\d{5,}\b/.test(t)) {
-    return texto;
-  }
-
-  if (/\b\d+\s*(mil|k|lucas)\b/i.test(t)) {
-    return texto;
-  }
-
-  return null;
-}
-
-function esConsultaEstado(mensaje) {
-  const t = normalizar(mensaje);
-
-  return (
-    /(como va|como viene|hay novedades|alguna novedad|encontraron algo|aparecio algo|hay algo|sigue activa|estado de la busqueda)/i.test(t) ||
-    /(que novedades|que hay|ya hay algo|alguna opcion|alguna propiedad)/i.test(t)
-  );
-}
-
-function detectarCambioSimple(mensaje, estado) {
-  const t = normalizar(mensaje);
-  const cambios = [];
-
-  if (/(departamento|depto|dpto|departamentos)/i.test(t)) {
-    cambios.push("ahora también aceptarías departamentos");
-  }
-
-  if (/(casa|casas)/i.test(t) && estado.motivo && !normalizar(estado.motivo).includes("casa")) {
-    cambios.push("ahora también mencionás casa");
-  }
-
-  if (/(terreno|lote|lotes)/i.test(t)) {
-    cambios.push("ahora también mencionás terreno o lote");
-  }
-
-  const nuevoPresupuesto = detectarPresupuestoSimple(mensaje);
-  if (nuevoPresupuesto && nuevoPresupuesto !== estado.presupuesto) {
-    cambios.push(`actualizás presupuesto a ${nuevoPresupuesto}`);
-  }
-
-  if (/(zona norte|zona sur|zona centro|nueva cordoba|general paz|alberdi|guemes|alta cordoba|arguello|villa belgrano)/i.test(t)) {
-    cambios.push(`agregás o modificás zona: ${mensaje}`);
-  }
-
-  if (/(balcon|cochera|patio|pileta|terraza|quincho|jardin|dos dormitorios|2 dormitorios|tres dormitorios|3 dormitorios)/i.test(t)) {
-    cambios.push(`agregás preferencia: ${mensaje}`);
-  }
-
-  if (cambios.length === 0) {
-    cambios.push(`agregás este dato: ${mensaje}`);
-  }
-
-  return cambios.join(". ");
-}
-
-function resumenEstado(estado) {
-  const partes = [];
-
-  if (estado.motivo) partes.push(estado.motivo);
-  if (estado.presupuesto) partes.push(`presupuesto cercano a ${estado.presupuesto}`);
-
-  if (partes.length === 0) return "teníamos una búsqueda iniciada";
-
-  return partes.join(", ");
-}
-
-function actualizarOrientable(estado) {
-  const orientable =
-    estado.motivo !== null &&
-    estado.intencion !== null &&
-    estado.presupuesto !== null;
-
-  return {
-    ...estado,
-    orientable,
-    etapa: orientable ? "orientable" : estado.etapa
-  };
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function asegurarEstadoCasaLista(estadoActual) {
@@ -152,12 +81,77 @@ function asegurarEstadoCasaLista(estadoActual) {
     motivo: estadoActual.motivo ?? null,
     intencion: estadoActual.intencion ?? null,
     presupuesto: estadoActual.presupuesto ?? null,
-    etapa: estadoActual.etapa ?? "motivo",
+
+    tieneIntencion: estadoActual.tieneIntencion ?? Boolean(estadoActual.intencion),
+    tieneCapital: estadoActual.tieneCapital ?? Boolean(estadoActual.presupuesto),
     orientable: estadoActual.orientable ?? false,
+
+    etapa: estadoActual.etapa ?? "motivo",
     historial: estadoActual.historial ?? [],
     preferencias: estadoActual.preferencias ?? [],
+
     ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? null,
-    ultimoCambioDetectado: estadoActual.ultimoCambioDetectado ?? null
+    requiereOperador: estadoActual.requiereOperador ?? false,
+    contadorRespuestas: estadoActual.contadorRespuestas ?? 0,
+
+    creadoEn: estadoActual.creadoEn ?? new Date().toISOString(),
+    actualizadoEn: estadoActual.actualizadoEn ?? new Date().toISOString()
+  };
+}
+
+function esEntradaGenerica(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "");
+
+  return (
+    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|quiero info|quiero informacion)$/.test(t) ||
+    /(vi un anuncio|vengo del anuncio|me interesa informacion|me interesa info|de que se trata|quiero saber mas|pasame info|pasame informacion)/.test(t)
+  );
+}
+
+function detectarIntencion(texto) {
+  const t = normalizar(texto);
+
+  return /\b(comprar|compra|busco|buscando|quiero|quisiera|me interesa|propiedad|casa|departamento|depto|dpto|terreno|lote)\b/.test(t);
+}
+
+function detectarCapital(texto) {
+  const t = normalizar(texto);
+
+  const hablaDeDinero =
+    /\b(usd|dolar|dolares|u\$s|us\$|verdes|lucas|k|millones|millon|pesos|capital|presupuesto|tengo|dispongo|cuento con|me puedo estirar)\b/.test(t);
+
+  const tieneNumero = /\d/.test(t);
+
+  const numeroGrande = /\b\d{5,}\b/.test(t.replace(/[.\s]/g, ""));
+
+  return (hablaDeDinero && tieneNumero) || numeroGrande;
+}
+
+function esConsultaEstado(texto) {
+  const t = normalizar(texto);
+
+  return /\b(como va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio|aparecio algo|hay algo|algo para mi|en que quedo|sigue activa|estado de la busqueda|tienen algo|buscaron)\b/.test(t);
+}
+
+function requiereOperador(texto) {
+  const t = normalizar(texto);
+
+  return /\b(escritura|legal|abogado|comision|comisiones|financiacion bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|boleto|contrato|sena|seña|reserva|impuesto|papeles|documentacion)\b/.test(t);
+}
+
+function guardarMensajeOriginal(estado, mensaje, categoria) {
+  const texto = String(mensaje || "").trim();
+
+  const evento = {
+    fecha: new Date().toISOString(),
+    mensajeOriginal: texto,
+    categoria
+  };
+
+  return {
+    ...estado,
+    historial: [...(estado.historial || []), evento].slice(-100),
+    actualizadoEn: new Date().toISOString()
   };
 }
 
@@ -167,157 +161,110 @@ function actualizarEstado(mensaje, estadoActual) {
 
   if (!texto) return estado;
 
-  const historialBase = [
-    ...(estado.historial || []),
-    {
-      mensaje: texto,
-      etapa: estado.etapa,
-      fecha: new Date().toISOString()
-    }
-  ].slice(-50);
+  let categoria = "MENSAJE_REGISTRABLE";
 
-  if (estado.orientable) {
-    const consultaEstado = esConsultaEstado(texto);
-    const cambio = consultaEstado ? null : detectarCambioSimple(texto, estado);
-
-    const nuevoPresupuesto = detectarPresupuestoSimple(texto);
-
-    return {
-      ...estado,
-      presupuesto: nuevoPresupuesto || estado.presupuesto,
-      historial: historialBase,
-      preferencias: consultaEstado
-        ? estado.preferencias
-        : [...(estado.preferencias || []), texto].slice(-50),
-      ultimaAccionEstado: consultaEstado
-        ? "POST_ORIENTABLE_CONSULTA_ESTADO"
-        : "POST_ORIENTABLE_DETALLE",
-      ultimoCambioDetectado: cambio
-    };
+  if (estado.orientable && requiereOperador(texto)) {
+    categoria = "REQUIERE_OPERADOR";
+  } else if (estado.orientable && esConsultaEstado(texto)) {
+    categoria = "CONSULTA_ESTADO";
+  } else if (esEntradaGenerica(texto) && !estado.tieneIntencion) {
+    categoria = "SALUDO_PEDIR_BUSQUEDA";
   }
 
-  if (!estado.motivo) {
-    if (esEntradaGenerica(texto)) {
-      return {
-        ...estado,
-        etapa: "motivo",
-        historial: historialBase,
-        ultimaAccionEstado: "ENTRADA_GENERICA"
-      };
-    }
+  estado = guardarMensajeOriginal(estado, texto, categoria);
 
-    const intencionDetectada = detectarIntencionSimple(texto);
-    const presupuestoDetectado = detectarPresupuestoSimple(texto);
-
-    estado = {
-      ...estado,
-      motivo: texto,
-      intencion: intencionDetectada,
-      presupuesto: presupuestoDetectado,
-      etapa: "intencion",
-      historial: historialBase,
-      ultimaAccionEstado: "MOTIVO_RECIBIDO"
-    };
-
-    estado = actualizarOrientable(estado);
-
-    if (!estado.orientable) {
-      if (!estado.intencion) estado.etapa = "intencion";
-      else if (!estado.presupuesto) estado.etapa = "presupuesto";
-    }
-
-    return estado;
+  if (!estado.tieneIntencion && detectarIntencion(texto)) {
+    estado.tieneIntencion = true;
+    estado.intencion = "avanzar";
+    estado.motivo = estado.motivo || texto;
   }
 
-  if (!estado.intencion) {
-    estado = {
-      ...estado,
-      intencion: clasificarIntencion(texto),
-      etapa: "presupuesto",
-      historial: historialBase,
-      ultimaAccionEstado: "INTENCION_RECIBIDA"
-    };
-
-    return actualizarOrientable(estado);
+  if (!estado.tieneCapital && detectarCapital(texto)) {
+    estado.tieneCapital = true;
+    estado.presupuesto = estado.presupuesto || texto;
   }
 
-  if (!estado.presupuesto) {
-    estado = {
-      ...estado,
-      presupuesto: texto,
-      etapa: "orientable",
-      historial: historialBase,
-      ultimaAccionEstado: "CIERRE_ORIENTABLE"
-    };
-
-    return actualizarOrientable(estado);
+  if (estado.orientable && categoria === "MENSAJE_REGISTRABLE") {
+    estado.preferencias = [...(estado.preferencias || []), texto].slice(-100);
   }
 
-  return actualizarOrientable({
-    ...estado,
-    historial: historialBase
-  });
+  if (categoria === "REQUIERE_OPERADOR") {
+    estado.requiereOperador = true;
+  }
+
+  estado.orientable = Boolean(estado.tieneIntencion && estado.tieneCapital);
+
+  if (!estado.tieneIntencion) {
+    estado.etapa = "motivo";
+    estado.ultimaAccionEstado = categoria === "SALUDO_PEDIR_BUSQUEDA"
+      ? "SALUDO_PEDIR_BUSQUEDA"
+      : "PREGUNTAR_INTENCION";
+  } else if (!estado.tieneCapital) {
+    estado.etapa = "capital";
+    estado.ultimaAccionEstado = "PREGUNTAR_CAPITAL";
+  } else if (categoria === "CONSULTA_ESTADO") {
+    estado.etapa = "orientable";
+    estado.ultimaAccionEstado = "CONSULTA_ESTADO";
+  } else if (categoria === "REQUIERE_OPERADOR") {
+    estado.etapa = "orientable";
+    estado.ultimaAccionEstado = "REQUIERE_OPERADOR";
+  } else {
+    estado.etapa = "orientable";
+    estado.ultimaAccionEstado = estado.orientable ? "MENSAJE_REGISTRABLE" : categoria;
+  }
+
+  estado.contadorRespuestas = (estado.contadorRespuestas || 0) + 1;
+
+  return estado;
 }
 
 function decidirSiguienteAccion(estado) {
-  if (estado.ultimaAccionEstado === "POST_ORIENTABLE_CONSULTA_ESTADO") {
+  const categoria = estado?.ultimaAccionEstado || "SALUDO_PEDIR_BUSQUEDA";
+
+  if (categoria === "SALUDO_PEDIR_BUSQUEDA") {
     return {
-      respuesta:
-        "Tenemos tu búsqueda registrada.\n\n" +
-        `Hasta ahora veníamos trabajando con esto: ${resumenEstado(estado)}.\n\n` +
-        "Si aparece una opción compatible, nos vamos a comunicar. También podés avisarnos si cambia tu presupuesto, zona o preferencias.",
-      accion: "POST_ORIENTABLE_CONSULTA_ESTADO",
+      respuesta: elegir("SALUDO_PEDIR_BUSQUEDA", estado),
+      accion: "SALUDO_PEDIR_BUSQUEDA",
       derivar: false
     };
   }
 
-  if (estado.ultimaAccionEstado === "POST_ORIENTABLE_DETALLE") {
+  if (categoria === "PREGUNTAR_INTENCION") {
     return {
-      respuesta:
-        `Perfecto. Teníamos registrado que buscabas ${resumenEstado(estado)}.\n\n` +
-        `Actualizo tu búsqueda: ${estado.ultimoCambioDetectado}.`,
-      accion: "POST_ORIENTABLE_DETALLE",
-      derivar: false
-    };
-  }
-
-  if (!estado.motivo) {
-    return {
-      respuesta:
-        "Hola, soy CasaLista.\n\n" +
-        "Te ayudamos a encontrar lo que estás buscando.\n\n" +
-        "Me podés describir qué te interesaría conseguir o evitar en una propiedad.",
-      accion: "PREGUNTAR_MOTIVO",
-      derivar: false
-    };
-  }
-
-  if (!estado.intencion) {
-    return {
-      respuesta:
-        "Bien.\n\n" +
-        "Si aparece algo según tus preferencias, ¿podríamos coordinar una visita?",
+      respuesta: elegir("PREGUNTAR_INTENCION", estado),
       accion: "PREGUNTAR_INTENCION",
       derivar: false
     };
   }
 
-  if (!estado.presupuesto) {
+  if (categoria === "PREGUNTAR_CAPITAL") {
     return {
-      respuesta:
-        "Perfecto.\n\n" +
-        "Para optimizar tu búsqueda, ¿de cuánto capital aproximado contás?",
-      accion: "PREGUNTAR_PRESUPUESTO",
+      respuesta: elegir("PREGUNTAR_CAPITAL", estado),
+      accion: "PREGUNTAR_CAPITAL",
       derivar: false
     };
   }
 
+  if (categoria === "CONSULTA_ESTADO") {
+    return {
+      respuesta: elegir("CONSULTA_ESTADO", estado),
+      accion: "CONSULTA_ESTADO",
+      derivar: false
+    };
+  }
+
+  if (categoria === "REQUIERE_OPERADOR") {
+    return {
+      respuesta: elegir("REQUIERE_OPERADOR", estado),
+      accion: "REQUIERE_OPERADOR",
+      derivar: true
+    };
+  }
+
   return {
-    respuesta:
-      "Perfecto, ya registramos tu búsqueda y vamos a empezar a revisar opciones compatibles.\n\n" +
-      "Si en algún momento recordás un dato relevante o cambia algo —zona, presupuesto, tipo de propiedad o preferencias— podés escribirnos cuando quieras. Cada información nueva actualiza la búsqueda.",
-    accion: "ORIENTABLE",
-    derivar: estado.intencion === "avanzar"
+    respuesta: elegir("MENSAJE_REGISTRABLE", estado),
+    accion: "MENSAJE_REGISTRABLE",
+    derivar: estado?.orientable === true
   };
 }
 
