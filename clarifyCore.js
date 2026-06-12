@@ -162,7 +162,7 @@ function detectaReferenciaEconomica(texto) {
   const t = normalizar(texto);
 
   if (
-    /(credito aprobado|crédito aprobado|prestamo aprobado|préstamo aprobado|preaprobado|pre aprobado)/.test(t)
+    /(credito aprobado|crédito aprobado|prestamo aprobado|préstamo aprobado|preaprobado|pre aprobado|tengo un credito|tengo un crédito|cuento con financiacion|cuento con financiación)/.test(t)
   ) {
     return true;
   }
@@ -179,16 +179,24 @@ function detectaReferenciaEconomica(texto) {
     return true;
   }
 
+  const referenciaEnPalabras =
+    /\b(cien|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos)\s+mil\b/.test(t) ||
+    /\b(un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+millones?\b/.test(t);
+
+  if (referenciaEnPalabras) {
+    return true;
+  }
+
   const tieneNumero = /\d/.test(t);
 
   const hablaDeDinero =
-    /(usd|u\$s|us\$|dolar|dólar|dolares|dólares|verdes|lucas|mil|k|millones|millon|millón|pesos|capital|presupuesto|inversion|inversión|tengo|dispongo|cuento con|hasta|me puedo estirar)/.test(t);
+    /(usd|u\$s|us\$|dolar|dólar|dolares|dólares|verdes|lucas|k|millones|millon|millón|pesos|peso|capital|presupuesto|inversion|inversión|tengo|dispongo|cuento con|hasta|me puedo estirar)/.test(t) ||
+    /\b\d+\s*mil\b/.test(t);
 
   const numeroGrande = /\b\d{5,}\b/.test(t.replace(/[.\s]/g, ""));
 
   return (tieneNumero && hablaDeDinero) || numeroGrande;
 }
-
 function actualizarEstado(mensaje, estadoActual) {
   let estado = asegurarEstado(estadoActual);
   const texto = String(mensaje || "").trim();
