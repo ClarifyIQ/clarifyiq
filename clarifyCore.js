@@ -1,20 +1,24 @@
 // clarifyCore.js
-// CasaLista V1 = conservar información + seleccionar respuesta segura
-// Interfaz conservada:
+// CasaLista V1 = conservar contexto + seleccionar respuesta segura
+// Interfaz mantenida:
 // actualizarEstado(mensaje, estadoActual)
 // decidirSiguienteAccion(estado)
 
 const RESPUESTAS = {
-  SALUDO_PEDIR_BUSQUEDA: [
-    "Hola, soy CasaLista.\n\nEstamos para ayudarte y acompañarte durante la búsqueda de tu próxima propiedad.\n\nContame qué te gustaría encontrar o qué te gustaría evitar en una propiedad."
+  APERTURA: [
+    "Hola, somos CasaLista.\n\nAyudamos a personas que están buscando comprar una propiedad.\n\nNos contás qué estás buscando y, si aparece algo compatible, nos comunicamos con vos.\n\n¿Qué te gustaría encontrar?"
   ],
 
   PREGUNTAR_INTENCION: [
-    "Bien.\n\nSi aparece una opción que tenga sentido para vos, ¿podríamos coordinar una visita?"
+    "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
   ],
 
-  PREGUNTAR_CAPITAL: [
-    "Perfecto.\n\nPara optimizar tu búsqueda, ¿de cuánto capital aproximado contás?"
+  PREGUNTAR_REFERENCIA_ECONOMICA: [
+    "Perfecto.\n\nPara tener una referencia razonable, ¿en qué rango de presupuesto te sentirías cómodo trabajando?"
+  ],
+
+  ORIENTABLE: [
+    "Perfecto.\n\nYa tenemos una base para empezar.\n\nSi en algún momento querés sumar un dato o cambia algo, podés escribirnos cuando quieras."
   ],
 
   MENSAJE_REGISTRABLE: [
@@ -39,30 +43,36 @@ const RESPUESTAS = {
 
 function elegir(categoria, estado) {
   const lista = RESPUESTAS[categoria] || RESPUESTAS.REQUIERE_OPERADOR;
-  const n = estado?.contadorRespuestas || 0;
-  return lista[n % lista.length];
+  const historial = Array.isArray(estado?.historial) ? estado.historial : [];
+  return lista[historial.length % lista.length];
 }
 
 function crearEstadoInicial() {
   return {
-    motivo: null,
-    intencion: null,
-    presupuesto: null,
-
-    tieneIntencion: false,
-    tieneCapital: false,
     orientable: false,
+    intencion: null,
+    referenciaEconomica: null,
+    etapa: "apertura",
+    ultimaAccionEstado: "APERTURA",
+    historial: []
+  };
+}
 
-    etapa: "motivo",
-    historial: [],
-    preferencias: [],
+function asegurarEstado(estadoActual) {
+  if (!estadoActual) return crearEstadoInicial();
 
-    ultimaAccionEstado: null,
-    requiereOperador: false,
-    contadorRespuestas: 0,
-
-    creadoEn: new Date().toISOString(),
-    actualizadoEn: new Date().toISOString()
+  return {
+    orientable: Boolean(estadoActual.orientable),
+    intencion: estadoActual.intencion ?? null,
+    referenciaEconomica:
+      estadoActual.referenciaEconomica ??
+      estadoActual.presupuesto ??
+      null,
+    etapa: estadoActual.etapa ?? "apertura",
+    ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? "APERTURA",
+    historial: Array.isArray(estadoActual.historial)
+      ? estadoActual.historial
+      : []
   };
 }
 
@@ -74,157 +84,123 @@ function normalizar(texto) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function asegurarEstadoCasaLista(estadoActual) {
-  if (!estadoActual) return crearEstadoInicial();
-
-  return {
-    motivo: estadoActual.motivo ?? null,
-    intencion: estadoActual.intencion ?? null,
-    presupuesto: estadoActual.presupuesto ?? null,
-
-    tieneIntencion: estadoActual.tieneIntencion ?? Boolean(estadoActual.intencion),
-    tieneCapital: estadoActual.tieneCapital ?? Boolean(estadoActual.presupuesto),
-    orientable: estadoActual.orientable ?? false,
-
-    etapa: estadoActual.etapa ?? "motivo",
-    historial: estadoActual.historial ?? [],
-    preferencias: estadoActual.preferencias ?? [],
-
-    ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? null,
-    requiereOperador: estadoActual.requiereOperador ?? false,
-    contadorRespuestas: estadoActual.contadorRespuestas ?? 0,
-
-    creadoEn: estadoActual.creadoEn ?? new Date().toISOString(),
-    actualizadoEn: estadoActual.actualizadoEn ?? new Date().toISOString()
-  };
-}
-
-function esEntradaGenerica(texto) {
-  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "");
-
-  return (
-    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|quiero info|quiero informacion)$/.test(t) ||
-    /(vi un anuncio|vengo del anuncio|me interesa informacion|me interesa info|de que se trata|quiero saber mas|pasame info|pasame informacion)/.test(t)
-  );
-}
-
-function detectarIntencion(texto) {
-  const t = normalizar(texto);
-
-  return /\b(comprar|compra|busco|buscando|quiero|quisiera|me interesa|propiedad|casa|departamento|depto|dpto|terreno|lote)\b/.test(t);
-}
-
-function detectarCapital(texto) {
-  const t = normalizar(texto);
-
-  const hablaDeDinero =
-    /\b(usd|dolar|dolares|u\$s|us\$|verdes|lucas|k|millones|millon|pesos|capital|presupuesto|tengo|dispongo|cuento con|me puedo estirar)\b/.test(t);
-
-  const tieneNumero = /\d/.test(t);
-
-  const numeroGrande = /\b\d{5,}\b/.test(t.replace(/[.\s]/g, ""));
-
-  return (hablaDeDinero && tieneNumero) || numeroGrande;
-}
-
-function esConsultaEstado(texto) {
-  const t = normalizar(texto);
-
-  return /\b(como va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio|aparecio algo|hay algo|algo para mi|en que quedo|sigue activa|estado de la busqueda|tienen algo|buscaron)\b/.test(t);
-}
-
-function requiereOperador(texto) {
-  const t = normalizar(texto);
-
-  return /\b(escritura|legal|abogado|comision|comisiones|financiacion bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|boleto|contrato|sena|seña|reserva|impuesto|papeles|documentacion)\b/.test(t);
-}
-
-function guardarMensajeOriginal(estado, mensaje, categoria) {
-  const texto = String(mensaje || "").trim();
-
+function guardarHistorial(estado, mensajeOriginal, categoria) {
   const evento = {
     fecha: new Date().toISOString(),
-    mensajeOriginal: texto,
+    mensajeOriginal: String(mensajeOriginal || "").trim(),
     categoria
   };
 
   return {
     ...estado,
-    historial: [...(estado.historial || []), evento].slice(-100),
-    actualizadoEn: new Date().toISOString()
+    historial: [...estado.historial, evento].slice(-200),
+    ultimaAccionEstado: categoria
   };
 }
 
+function esEntradaGenerica(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
+
+  if (!t) return true;
+
+  return (
+    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta)$/.test(t) ||
+    t.length <= 3 ||
+    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata)/.test(t)
+  );
+}
+
+function detectaIntencionReal(texto) {
+  const t = normalizar(texto);
+
+  return (
+    /^(si|sí|s|ok|dale|claro|correcto)$/.test(t) ||
+    /(quiero comprar|busco comprar|estoy buscando para comprar|estoy para comprar|comprar una propiedad|quiero avanzar|avanzaria|avanzaría|si aparece algo|si tiene sentido|depende de la oportunidad)/.test(t)
+  );
+}
+
+function esConsultaEstado(texto) {
+  const t = normalizar(texto);
+
+  return /(como va|cómo va|hay novedades|alguna novedad|aparecio algo|apareció algo|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa)/.test(t);
+}
+
+function requiereOperador(texto) {
+  const t = normalizar(texto);
+
+  return /(escritura|legal|abogado|comision|comisión|financiacion bancaria|financiación bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|tasación|boleto|contrato|seña|reserva|papeles|documentacion|documentación)/.test(t);
+}
+
 function actualizarEstado(mensaje, estadoActual) {
-  let estado = asegurarEstadoCasaLista(estadoActual);
+  let estado = asegurarEstado(estadoActual);
   const texto = String(mensaje || "").trim();
 
-  if (!texto) return estado;
-
-  let categoria = "MENSAJE_REGISTRABLE";
-
-  if (estado.orientable && requiereOperador(texto)) {
-    categoria = "REQUIERE_OPERADOR";
-  } else if (estado.orientable && esConsultaEstado(texto)) {
-    categoria = "CONSULTA_ESTADO";
-  } else if (esEntradaGenerica(texto) && !estado.tieneIntencion) {
-    categoria = "SALUDO_PEDIR_BUSQUEDA";
+  if (!texto) {
+    estado = guardarHistorial(estado, mensaje, "APERTURA");
+    estado.etapa = "apertura";
+    return estado;
   }
 
-  estado = guardarMensajeOriginal(estado, texto, categoria);
+  // Después de orientable: guardar todo y responder seguro.
+  if (estado.orientable) {
+    if (requiereOperador(texto)) {
+      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
+      estado.etapa = "orientable";
+      return estado;
+    }
 
-  if (!estado.tieneIntencion && detectarIntencion(texto)) {
-    estado.tieneIntencion = true;
-    estado.intencion = "avanzar";
-    estado.motivo = estado.motivo || texto;
-  }
+    if (esConsultaEstado(texto)) {
+      estado = guardarHistorial(estado, texto, "CONSULTA_ESTADO");
+      estado.etapa = "orientable";
+      return estado;
+    }
 
-  if (!estado.tieneCapital && detectarCapital(texto)) {
-    estado.tieneCapital = true;
-    estado.presupuesto = estado.presupuesto || texto;
-  }
-
-  if (estado.orientable && categoria === "MENSAJE_REGISTRABLE") {
-    estado.preferencias = [...(estado.preferencias || []), texto].slice(-100);
-  }
-
-  if (categoria === "REQUIERE_OPERADOR") {
-    estado.requiereOperador = true;
-  }
-
-  estado.orientable = Boolean(estado.tieneIntencion && estado.tieneCapital);
-
-  if (!estado.tieneIntencion) {
-    estado.etapa = "motivo";
-    estado.ultimaAccionEstado = categoria === "SALUDO_PEDIR_BUSQUEDA"
-      ? "SALUDO_PEDIR_BUSQUEDA"
-      : "PREGUNTAR_INTENCION";
-  } else if (!estado.tieneCapital) {
-    estado.etapa = "capital";
-    estado.ultimaAccionEstado = "PREGUNTAR_CAPITAL";
-  } else if (categoria === "CONSULTA_ESTADO") {
+    estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
     estado.etapa = "orientable";
-    estado.ultimaAccionEstado = "CONSULTA_ESTADO";
-  } else if (categoria === "REQUIERE_OPERADOR") {
-    estado.etapa = "orientable";
-    estado.ultimaAccionEstado = "REQUIERE_OPERADOR";
-  } else {
-    estado.etapa = "orientable";
-    estado.ultimaAccionEstado = estado.orientable ? "MENSAJE_REGISTRABLE" : categoria;
+    return estado;
   }
 
-  estado.contadorRespuestas = (estado.contadorRespuestas || 0) + 1;
+  // Antes de orientable: preguntar lo mínimo.
+  if (!estado.intencion) {
+    if (esEntradaGenerica(texto)) {
+      estado = guardarHistorial(estado, texto, "APERTURA");
+      estado.etapa = "apertura";
+      return estado;
+    }
 
+    if (detectaIntencionReal(texto)) {
+      estado.intencion = texto;
+      estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+      estado.etapa = "referenciaEconomica";
+      return estado;
+    }
+
+    estado = guardarHistorial(estado, texto, "PREGUNTAR_INTENCION");
+    estado.etapa = "intencion";
+    return estado;
+  }
+
+  if (!estado.referenciaEconomica) {
+    estado.referenciaEconomica = texto;
+    estado.orientable = true;
+    estado = guardarHistorial(estado, texto, "ORIENTABLE");
+    estado.etapa = "orientable";
+    return estado;
+  }
+
+  estado.orientable = true;
+  estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
+  estado.etapa = "orientable";
   return estado;
 }
 
 function decidirSiguienteAccion(estado) {
-  const categoria = estado?.ultimaAccionEstado || "SALUDO_PEDIR_BUSQUEDA";
+  const categoria = estado?.ultimaAccionEstado || "APERTURA";
 
-  if (categoria === "SALUDO_PEDIR_BUSQUEDA") {
+  if (categoria === "APERTURA") {
     return {
-      respuesta: elegir("SALUDO_PEDIR_BUSQUEDA", estado),
-      accion: "SALUDO_PEDIR_BUSQUEDA",
+      respuesta: elegir("APERTURA", estado),
+      accion: "APERTURA",
       derivar: false
     };
   }
@@ -237,10 +213,18 @@ function decidirSiguienteAccion(estado) {
     };
   }
 
-  if (categoria === "PREGUNTAR_CAPITAL") {
+  if (categoria === "PREGUNTAR_REFERENCIA_ECONOMICA") {
     return {
-      respuesta: elegir("PREGUNTAR_CAPITAL", estado),
-      accion: "PREGUNTAR_CAPITAL",
+      respuesta: elegir("PREGUNTAR_REFERENCIA_ECONOMICA", estado),
+      accion: "PREGUNTAR_REFERENCIA_ECONOMICA",
+      derivar: false
+    };
+  }
+
+  if (categoria === "ORIENTABLE") {
+    return {
+      respuesta: elegir("ORIENTABLE", estado),
+      accion: "ORIENTABLE",
       derivar: false
     };
   }
@@ -264,7 +248,7 @@ function decidirSiguienteAccion(estado) {
   return {
     respuesta: elegir("MENSAJE_REGISTRABLE", estado),
     accion: "MENSAJE_REGISTRABLE",
-    derivar: estado?.orientable === true
+    derivar: false
   };
 }
 
