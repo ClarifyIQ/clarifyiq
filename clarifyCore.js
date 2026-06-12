@@ -203,8 +203,13 @@ function actualizarEstado(mensaje, estadoActual) {
   let estado = asegurarEstado(estadoActual);
   const texto = String(mensaje || "").trim();
 
-  if (!texto) {
-    estado = guardarHistorial(estado, mensaje, "APERTURA");
+  const esPrimerContacto =
+    !estadoActual ||
+    !Array.isArray(estado.historial) ||
+    estado.historial.length === 0;
+
+  if (esPrimerContacto) {
+    estado = guardarHistorial(estado, texto, "APERTURA");
     estado.etapa = "apertura";
     return estado;
   }
