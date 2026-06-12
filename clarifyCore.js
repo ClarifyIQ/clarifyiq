@@ -1,5 +1,9 @@
 // clarifyCore.js
-// CasaLista V1 = conservar contexto + seleccionar respuesta segura
+// CasaLista V1
+//
+// Detectar únicamente lo que cambia una decisión automática.
+// Conservar intacto todo lo demás.
+//
 // Interfaz mantenida:
 // actualizarEstado(mensaje, estadoActual)
 // decidirSiguienteAccion(estado)
@@ -9,7 +13,7 @@ const RESPUESTAS = {
     "Hola, somos CasaLista.\n\nAyudamos a personas que están buscando comprar una propiedad.\n\nNos contás qué estás buscando y, si aparece algo compatible, nos comunicamos con vos.\n\n¿Qué te gustaría encontrar?"
   ],
 
-  PREGUNTAR_INTENCION: [
+  PREGUNTAR_CONTINUIDAD: [
     "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
   ],
 
@@ -34,6 +38,16 @@ const RESPUESTAS = {
     "Por el momento no tenemos novedades concretas para compartir.\n\nSi aparece algo que tenga sentido para vos, te vamos a escribir."
   ],
 
+  CORTESIA: [
+    "De nada.\n\nCuando quieras sumar información o consultar novedades, podés escribirnos.",
+    "Gracias a vos.\n\nSeguimos teniendo en cuenta tu búsqueda."
+  ],
+
+  MALESTAR: [
+    "Gracias por comentarlo.\n\nEste mensaje será revisado por un operador para darle seguimiento.",
+    "Lamento que lo sientas así.\n\nUn operador va a revisar este mensaje para darle mejor seguimiento."
+  ],
+
   REQUIERE_OPERADOR: [
     "Gracias, quedó registrado.\n\nPara responderte correctamente, este mensaje requiere revisión de un operador.",
     "Tu consulta quedó registrada.\n\nUn operador la va a revisar para darte una respuesta adecuada.",
@@ -54,12 +68,21 @@ function crearEstadoInicial() {
     referenciaEconomica: null,
     etapa: "apertura",
     ultimaAccionEstado: "APERTURA",
+    requiereOperador: false,
     historial: []
   };
 }
 
 function asegurarEstado(estadoActual) {
   if (!estadoActual) return crearEstadoInicial();
+
+  const etapaAnterior = estadoActual.etapa === "intencion"
+    ? "continuidad"
+    : estadoActual.etapa ?? "apertura";
+
+  const accionAnterior = estadoActual.ultimaAccionEstado === "PREGUNTAR_INTENCION"
+    ? "PREGUNTAR_CONTINUIDAD"
+    : estadoActual.ultimaAccionEstado ?? "APERTURA";
 
   return {
     orientable: Boolean(estadoActual.orientable),
@@ -68,8 +91,9 @@ function asegurarEstado(estadoActual) {
       estadoActual.referenciaEconomica ??
       estadoActual.presupuesto ??
       null,
-    etapa: estadoActual.etapa ?? "apertura",
-    ultimaAccionEstado: estadoActual.ultimaAccionEstado ?? "APERTURA",
+    etapa: etapaAnterior,
+    ultimaAccionEstado: accionAnterior,
+    requiereOperador: Boolean(estadoActual.requiereOperador),
     historial: Array.isArray(estadoActual.historial)
       ? estadoActual.historial
       : []
@@ -104,31 +128,65 @@ function esEntradaGenerica(texto) {
   if (!t) return true;
 
   return (
-    /^(hola|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta)$/.test(t) ||
+    /^(hola|ola|halo|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta|contame)$/.test(t) ||
     t.length <= 3 ||
-    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata)/.test(t)
+    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata|me pasaron este numero)/.test(t)
   );
 }
 
-function detectaIntencionReal(texto) {
+function esCortesia(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
+
+  return /^(gracias|muchas gracias|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya)$/.test(t);
+}
+
+function esMalestar(texto) {
   const t = normalizar(texto);
 
-  return (
-    /^(si|sí|s|ok|dale|claro|correcto)$/.test(t) ||
-    /(quiero comprar|busco comprar|estoy buscando para comprar|estoy para comprar|comprar una propiedad|quiero avanzar|avanzaria|avanzaría|si aparece algo|si tiene sentido|depende de la oportunidad)/.test(t)
-  );
+  return /(no me siento acompanado|no me siento acompañado|contestan cualquier cosa|no entendieron|no me entendieron|esto no sirve|me estan haciendo perder tiempo|me están haciendo perder tiempo|no sirve|cualquier cosa ustedes|responden cualquier cosa)/.test(t);
 }
 
 function esConsultaEstado(texto) {
   const t = normalizar(texto);
 
-  return /(como va|cómo va|hay novedades|alguna novedad|aparecio algo|apareció algo|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa)/.test(t);
+  return /(como va|cómo va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio algo|apareció algo|aparecio|apareció|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa|estado de la busqueda|estado de la búsqueda)/.test(t);
 }
 
 function requiereOperador(texto) {
   const t = normalizar(texto);
 
-  return /(escritura|legal|abogado|comision|comisión|financiacion bancaria|financiación bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|tasación|boleto|contrato|seña|reserva|papeles|documentacion|documentación)/.test(t);
+  return /(escritura|legal|abogado|comision|comisión|comisiones|financiacion bancaria|financiación bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|tasación|boleto|contrato|seña|sena|reserva|papeles|documentacion|documentación|impuesto|impuestos)/.test(t);
+}
+
+function detectaReferenciaEconomica(texto) {
+  const t = normalizar(texto);
+
+  if (
+    /(credito aprobado|crédito aprobado|prestamo aprobado|préstamo aprobado|preaprobado|pre aprobado)/.test(t)
+  ) {
+    return true;
+  }
+
+  if (
+    /(vendo|vender|vendiendo).*(me quedan|me queda|tendria|tendría|voy a tener|quedarian|quedarían)/.test(t)
+  ) {
+    return true;
+  }
+
+  if (
+    /(no lo tengo definido|no tengo definido|no se exactamente|no sé exactamente|estoy viendo opciones|estoy evaluando|depende de lo que aparezca|depende si vendo primero|si vendo primero)/.test(t)
+  ) {
+    return true;
+  }
+
+  const tieneNumero = /\d/.test(t);
+
+  const hablaDeDinero =
+    /(usd|u\$s|us\$|dolar|dólar|dolares|dólares|verdes|lucas|mil|k|millones|millon|millón|pesos|capital|presupuesto|inversion|inversión|tengo|dispongo|cuento con|hasta|me puedo estirar)/.test(t);
+
+  const numeroGrande = /\b\d{5,}\b/.test(t.replace(/[.\s]/g, ""));
+
+  return (tieneNumero && hablaDeDinero) || numeroGrande;
 }
 
 function actualizarEstado(mensaje, estadoActual) {
@@ -143,7 +201,15 @@ function actualizarEstado(mensaje, estadoActual) {
 
   // Después de orientable: guardar todo y responder seguro.
   if (estado.orientable) {
+    if (esMalestar(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "MALESTAR");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     if (requiereOperador(texto)) {
+      estado.requiereOperador = true;
       estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
       estado.etapa = "orientable";
       return estado;
@@ -155,36 +221,101 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
+    if (esCortesia(texto)) {
+      estado = guardarHistorial(estado, texto, "CORTESIA");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
     estado.etapa = "orientable";
     return estado;
   }
 
   // Antes de orientable: preguntar lo mínimo.
-  if (!estado.intencion) {
+
+  // 1. APERTURA / DESCRIPCION LIBRE
+  if (estado.etapa === "apertura") {
     if (esEntradaGenerica(texto)) {
       estado = guardarHistorial(estado, texto, "APERTURA");
       estado.etapa = "apertura";
       return estado;
     }
 
-    if (detectaIntencionReal(texto)) {
-      estado.intencion = texto;
-      estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+    estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
+    estado.etapa = "continuidad";
+    return estado;
+  }
+
+  // 2. CONTINUIDAD
+  if (estado.etapa === "continuidad" || !estado.intencion) {
+    if (esMalestar(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "MALESTAR");
+      estado.etapa = "continuidad";
+      return estado;
+    }
+
+    if (requiereOperador(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
+      estado.etapa = "continuidad";
+      return estado;
+    }
+
+    if (esConsultaEstado(texto)) {
+      estado = guardarHistorial(estado, texto, "CONSULTA_ESTADO");
+      estado.etapa = "continuidad";
+      return estado;
+    }
+
+    // En continuidad, casi todo avanza.
+    estado.intencion = texto;
+    estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+    estado.etapa = "referenciaEconomica";
+    return estado;
+  }
+
+  // 3. REFERENCIA ECONOMICA
+  if (!estado.referenciaEconomica) {
+    if (esMalestar(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "MALESTAR");
       estado.etapa = "referenciaEconomica";
       return estado;
     }
 
-    estado = guardarHistorial(estado, texto, "PREGUNTAR_INTENCION");
-    estado.etapa = "intencion";
-    return estado;
-  }
+    if (requiereOperador(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
+      estado.etapa = "referenciaEconomica";
+      return estado;
+    }
 
-  if (!estado.referenciaEconomica) {
-    estado.referenciaEconomica = texto;
-    estado.orientable = true;
-    estado = guardarHistorial(estado, texto, "ORIENTABLE");
-    estado.etapa = "orientable";
+    if (esConsultaEstado(texto)) {
+      estado = guardarHistorial(estado, texto, "CONSULTA_ESTADO");
+      estado.etapa = "referenciaEconomica";
+      return estado;
+    }
+
+    if (esCortesia(texto)) {
+      estado = guardarHistorial(estado, texto, "CORTESIA");
+      estado.etapa = "referenciaEconomica";
+      return estado;
+    }
+
+    if (detectaReferenciaEconomica(texto)) {
+      estado.referenciaEconomica = texto;
+      estado.orientable = true;
+      estado = guardarHistorial(estado, texto, "ORIENTABLE");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
+    // Si respondió a la pregunta económica pero no detectamos referencia clara,
+    // conservamos y volvemos a pedir una referencia mínima.
+    estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+    estado.etapa = "referenciaEconomica";
     return estado;
   }
 
@@ -205,10 +336,10 @@ function decidirSiguienteAccion(estado) {
     };
   }
 
-  if (categoria === "PREGUNTAR_INTENCION") {
+  if (categoria === "PREGUNTAR_CONTINUIDAD" || categoria === "PREGUNTAR_INTENCION") {
     return {
-      respuesta: elegir("PREGUNTAR_INTENCION", estado),
-      accion: "PREGUNTAR_INTENCION",
+      respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado),
+      accion: "PREGUNTAR_CONTINUIDAD",
       derivar: false
     };
   }
@@ -234,6 +365,22 @@ function decidirSiguienteAccion(estado) {
       respuesta: elegir("CONSULTA_ESTADO", estado),
       accion: "CONSULTA_ESTADO",
       derivar: false
+    };
+  }
+
+  if (categoria === "CORTESIA") {
+    return {
+      respuesta: elegir("CORTESIA", estado),
+      accion: "CORTESIA",
+      derivar: false
+    };
+  }
+
+  if (categoria === "MALESTAR") {
+    return {
+      respuesta: elegir("MALESTAR", estado),
+      accion: "MALESTAR",
+      derivar: true
     };
   }
 
