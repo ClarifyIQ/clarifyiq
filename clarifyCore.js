@@ -204,9 +204,8 @@ function actualizarEstado(mensaje, estadoActual) {
   const texto = String(mensaje || "").trim();
 
   const esPrimerContacto =
-    !estadoActual ||
-    !Array.isArray(estado.historial) ||
-    estado.historial.length === 0;
+    !Array.isArray(estadoActual?.historial) ||
+    estadoActual.historial.length === 0;
 
   if (esPrimerContacto) {
     estado = guardarHistorial(estado, texto, "APERTURA");
@@ -284,7 +283,6 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    // En continuidad, casi todo avanza.
     estado.intencion = texto;
     estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
     estado.etapa = "referenciaEconomica";
@@ -327,8 +325,6 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    // Si respondió a la pregunta económica pero no detectamos referencia clara,
-    // conservamos y volvemos a pedir una referencia mínima.
     estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
     estado.etapa = "referenciaEconomica";
     return estado;
@@ -339,7 +335,6 @@ function actualizarEstado(mensaje, estadoActual) {
   estado.etapa = "orientable";
   return estado;
 }
-
 function decidirSiguienteAccion(estado) {
   const categoria = estado?.ultimaAccionEstado || "APERTURA";
 
