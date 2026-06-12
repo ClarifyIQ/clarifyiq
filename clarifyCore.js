@@ -129,8 +129,10 @@ function esEntradaGenerica(texto) {
 
   return (
     /^(hola|ola|halo|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta|contame)$/.test(t) ||
+
     t.length <= 3 ||
-    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata|me pasaron este numero)/.test(t)
+
+    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata|como funciona|cómo funciona|me pasaron este numero|me paso este numero|me pasaron el numero|mi amiga me paso este numero|mi amigo me paso este numero|ustedes consiguen propiedades|ustedes buscan propiedades|consiguen propiedades|buscan propiedades)/.test(t)
   );
 }
 
