@@ -10,9 +10,9 @@
 
 const RESPUESTAS = {
   APERTURA: [
-  
-    "Hola, somos CasaLista.\n\nAyudamos a personas que están buscando comprar una propiedad.\n\nNo hace falta que tengas toda tu búsqueda definida desde el principio. La idea es ir conociendo mejor lo que estás buscando para poder acompañarte durante ese proceso.\n\nCuanto mejor conozcamos tu búsqueda, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"],
-  PREGUNTAR_CONTINUIDAD: [
+  "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"
+],  
+ PREGUNTAR_CONTINUIDAD: [
     "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
   ],
 
