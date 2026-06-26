@@ -12,7 +12,13 @@ const RESPUESTAS = {
   APERTURA: [
   "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"
 ],  
- PREGUNTAR_CONTINUIDAD: [
+TIPO_PROPIEDAD_NO_VALIDO: [
+    "No pude validar qué tipo de propiedad estás buscando.\n\nPuede haber un error de escritura o la respuesta no haber quedado suficientemente clara.\n\nPara poder continuar, respondé con algo simple, por ejemplo: casa, departamento, terreno, lote o quinta."
+  ],
+
+  TIPO_PROPIEDAD_FINAL: [
+    "Todavía no pude validar qué tipo de propiedad estás buscando.\n\nCuando quieras retomar la búsqueda, respondé con el tipo de propiedad que buscás y seguimos desde ahí."
+  ], PREGUNTAR_CONTINUIDAD: [
     "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
   ],
 
