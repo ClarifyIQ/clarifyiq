@@ -251,18 +251,18 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // Antes de orientable: preguntar lo mínimo.
+   // Antes de orientable: preguntar lo mínimo.
 
-  // 1. APERTURA / DESCRIPCION LIBRE
+  // 1. APERTURA / TIPO DE PROPIEDAD
   if (estado.etapa === "apertura") {
-    if (esEntradaGenerica(texto)) {
-      estado = guardarHistorial(estado, texto, "APERTURA");
-      estado.etapa = "apertura";
+    if (detectaTipoPropiedad(texto)) {
+      estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
+      estado.etapa = "continuidad";
       return estado;
     }
 
-    estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
-    estado.etapa = "continuidad";
+    estado = guardarHistorial(estado, texto, "TIPO_PROPIEDAD_NO_VALIDO");
+    estado.etapa = "apertura";
     return estado;
   }
 
@@ -350,7 +350,21 @@ function decidirSiguienteAccion(estado) {
       derivar: false
     };
   }
+  if (categoria === "TIPO_PROPIEDAD_NO_VALIDO") {
+    return {
+      respuesta: elegir("TIPO_PROPIEDAD_NO_VALIDO", estado),
+      accion: "TIPO_PROPIEDAD_NO_VALIDO",
+      derivar: false
+    };
+  }
 
+  if (categoria === "TIPO_PROPIEDAD_FINAL") {
+    return {
+      respuesta: elegir("TIPO_PROPIEDAD_FINAL", estado),
+      accion: "TIPO_PROPIEDAD_FINAL",
+      derivar: false
+    };
+  }
   if (categoria === "PREGUNTAR_CONTINUIDAD" || categoria === "PREGUNTAR_INTENCION") {
     return {
       respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado),
