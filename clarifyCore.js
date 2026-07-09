@@ -22,11 +22,23 @@ const RESPUESTAS = {
   ],
 
   PREGUNTAR_CONTINUIDAD: [
-    "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
+    "Perfecto.\n\nSi apareciera una propiedad compatible con lo que estás buscando, ¿estarías dispuesto a coordinar una visita para conocerla?\n\nRespondé con una opción:\n\n1. Sí.\n2. No."
+  ],
+
+  CONTINUIDAD_NO_VALIDO: [
+    "No pude validar si estarías dispuesto a coordinar una visita.\n\nPara poder continuar, respondé con una opción:\n\n1. Sí.\n2. No."
+  ],
+
+  CONTINUIDAD_FINAL: [
+    "Todavía no pude validar esa información.\n\nCuando quieras retomar la búsqueda, respondé la pregunta anterior y seguimos desde ahí."
+  ],
+
+  CONTINUIDAD_NO: [
+    "Entendido.\n\nPor ahora dejamos el flujo automático acá.\n\nSi más adelante estás dispuesto a coordinar una visita, podés escribirnos y retomamos la búsqueda."
   ],
 
   PREGUNTAR_REFERENCIA_ECONOMICA: [
-    "Perfecto.\n\nPara tener una referencia razonable, ¿en qué rango de presupuesto te sentirías cómodo trabajando?"
+    "Perfecto.\n\nPara orientarnos mejor también nos sirve una referencia económica aproximada.\n\nNo hace falta que sea un monto exacto. Puede ser un presupuesto estimado, un crédito aprobado o cualquier referencia que hoy tengas.\n\n¿Con qué presupuesto aproximado o referencia económica contás hoy?"
   ],
 
   ORIENTABLE: [
@@ -177,11 +189,38 @@ function detectaTipoPropiedad(texto) {
   );
 }
 
+function detectaRespuestaVisita(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, " ").trim();
+
+  if (
+    /^(1|si|sí|s|claro|dale|ok|okay|perfecto)$/.test(t) ||
+    /(si coordinaria|sí coordinaria|si coordinaría|sí coordinaría|coordino|coordinaria|coordinaría|haria una visita|haría una visita|voy a verla|quiero verla|la iria a ver|la iría a ver|me interesa verla)/.test(t)
+  ) {
+    return true;
+  }
+
+  if (
+    /^(2|no|n)$/.test(t) ||
+    /(por ahora no|solo estoy mirando|sólo estoy mirando|estoy mirando|estoy explorando|solo explorando|sólo explorando|no coordinaria|no coordinaría|no haria visita|no haría visita)/.test(t)
+  ) {
+    return false;
+  }
+
+  return null;
+}
+
 function ultimoFueTipoPropiedadNoValido(estado) {
   const historial = Array.isArray(estado?.historial) ? estado.historial : [];
   const ultimo = historial[historial.length - 1];
 
   return ultimo?.categoria === "TIPO_PROPIEDAD_NO_VALIDO";
+}
+
+function ultimoFueContinuidadNoValido(estado) {
+  const historial = Array.isArray(estado?.historial) ? estado.historial : [];
+  const ultimo = historial[historial.length - 1];
+
+  return ultimo?.categoria === "CONTINUIDAD_NO_VALIDO";
 }
 
 function detectaReferenciaEconomica(texto) {
@@ -238,6 +277,12 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
+  if (estado.etapa === "cerrado") {
+    estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
+    estado.etapa = "cerrado";
+    return estado;
+  }
+
   // Después de orientable: guardar todo y responder seguro.
   if (estado.orientable) {
     if (esMalestar(texto)) {
@@ -283,7 +328,7 @@ function actualizarEstado(mensaje, estadoActual) {
 
     if (ultimoFueTipoPropiedadNoValido(estado)) {
       estado = guardarHistorial(estado, texto, "TIPO_PROPIEDAD_FINAL");
-      estado.etapa = "apertura";
+      estado.etapa = "cerrado";
       return estado;
     }
 
@@ -292,8 +337,8 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // 2. CONTINUIDAD
-  if (estado.etapa === "continuidad" || !estado.intencion) {
+  // 2. CONTINUIDAD / VISITA
+  if (estado.etapa === "continuidad") {
     if (esMalestar(texto)) {
       estado.requiereOperador = true;
       estado = guardarHistorial(estado, texto, "MALESTAR");
@@ -314,14 +359,35 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    estado.intencion = texto;
-    estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
-    estado.etapa = "referenciaEconomica";
+    const respuestaVisita = detectaRespuestaVisita(texto);
+
+    if (respuestaVisita === true) {
+      estado.intencion = texto;
+      estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+      estado.etapa = "referenciaEconomica";
+      return estado;
+    }
+
+    if (respuestaVisita === false) {
+      estado.intencion = false;
+      estado = guardarHistorial(estado, texto, "CONTINUIDAD_NO");
+      estado.etapa = "cerrado";
+      return estado;
+    }
+
+    if (ultimoFueContinuidadNoValido(estado)) {
+      estado = guardarHistorial(estado, texto, "CONTINUIDAD_FINAL");
+      estado.etapa = "cerrado";
+      return estado;
+    }
+
+    estado = guardarHistorial(estado, texto, "CONTINUIDAD_NO_VALIDO");
+    estado.etapa = "continuidad";
     return estado;
   }
 
   // 3. REFERENCIA ECONOMICA
-  if (!estado.referenciaEconomica) {
+  if (estado.etapa === "referenciaEconomica" && !estado.referenciaEconomica) {
     if (esMalestar(texto)) {
       estado.requiereOperador = true;
       estado = guardarHistorial(estado, texto, "MALESTAR");
@@ -361,9 +427,7 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  estado.orientable = true;
   estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
-  estado.etapa = "orientable";
   return estado;
 }
 
@@ -398,6 +462,30 @@ function decidirSiguienteAccion(estado) {
     return {
       respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado),
       accion: "PREGUNTAR_CONTINUIDAD",
+      derivar: false
+    };
+  }
+
+  if (categoria === "CONTINUIDAD_NO_VALIDO") {
+    return {
+      respuesta: elegir("CONTINUIDAD_NO_VALIDO", estado),
+      accion: "CONTINUIDAD_NO_VALIDO",
+      derivar: false
+    };
+  }
+
+  if (categoria === "CONTINUIDAD_FINAL") {
+    return {
+      respuesta: elegir("CONTINUIDAD_FINAL", estado),
+      accion: "CONTINUIDAD_FINAL",
+      derivar: false
+    };
+  }
+
+  if (categoria === "CONTINUIDAD_NO") {
+    return {
+      respuesta: elegir("CONTINUIDAD_NO", estado),
+      accion: "CONTINUIDAD_NO",
       derivar: false
     };
   }
