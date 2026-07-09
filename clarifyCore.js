@@ -10,15 +10,18 @@
 
 const RESPUESTAS = {
   APERTURA: [
-  "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"
-],  
-TIPO_PROPIEDAD_NO_VALIDO: [
+    "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"
+  ],
+
+  TIPO_PROPIEDAD_NO_VALIDO: [
     "No pude validar qué tipo de propiedad estás buscando.\n\nPuede haber un error de escritura o la respuesta no haber quedado suficientemente clara.\n\nPara poder continuar, respondé con algo simple, por ejemplo: casa, departamento, terreno, lote o quinta."
   ],
 
   TIPO_PROPIEDAD_FINAL: [
     "Todavía no pude validar qué tipo de propiedad estás buscando.\n\nCuando quieras retomar la búsqueda, respondé con el tipo de propiedad que buscás y seguimos desde ahí."
-  ], PREGUNTAR_CONTINUIDAD: [
+  ],
+
+  PREGUNTAR_CONTINUIDAD: [
     "Perfecto.\n\nSi apareciera una opción que tenga sentido para vos, ¿estarías pensando en avanzar o por ahora estás explorando posibilidades?"
   ],
 
@@ -134,9 +137,7 @@ function esEntradaGenerica(texto) {
 
   return (
     /^(hola|ola|halo|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta|contame)$/.test(t) ||
-
     t.length <= 3 ||
-
     /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata|como funciona|cómo funciona|me pasaron este numero|me paso este numero|me pasaron el numero|mi amiga me paso este numero|mi amigo me paso este numero|ustedes consiguen propiedades|ustedes buscan propiedades|consiguen propiedades|buscan propiedades)/.test(t)
   );
 }
@@ -163,6 +164,24 @@ function requiereOperador(texto) {
   const t = normalizar(texto);
 
   return /(escritura|legal|abogado|comision|comisión|comisiones|financiacion bancaria|financiación bancaria|banco|hipoteca|quiero vender|vender una propiedad|tasacion|tasación|boleto|contrato|seña|sena|reserva|papeles|documentacion|documentación|impuesto|impuestos)/.test(t);
+}
+
+function detectaTipoPropiedad(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, " ").trim();
+
+  return (
+    /\b(casa|casita|casona|vivienda|propiedad)\b/.test(t) ||
+    /\b(departamento|departamemto|departameto|depto|monoambiente)\b/.test(t) ||
+    /\b(terreno|tereno|terrenoo|lote|lotes)\b/.test(t) ||
+    /\b(quinta|qunta|duplex|dúplex|ph)\b/.test(t)
+  );
+}
+
+function ultimoFueTipoPropiedadNoValido(estado) {
+  const historial = Array.isArray(estado?.historial) ? estado.historial : [];
+  const ultimo = historial[historial.length - 1];
+
+  return ultimo?.categoria === "TIPO_PROPIEDAD_NO_VALIDO";
 }
 
 function detectaReferenciaEconomica(texto) {
@@ -204,6 +223,7 @@ function detectaReferenciaEconomica(texto) {
 
   return (tieneNumero && hablaDeDinero) || numeroGrande;
 }
+
 function actualizarEstado(mensaje, estadoActual) {
   let estado = asegurarEstado(estadoActual);
   const texto = String(mensaje || "").trim();
@@ -251,13 +271,19 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-   // Antes de orientable: preguntar lo mínimo.
+  // Antes de orientable: preguntar lo mínimo.
 
   // 1. APERTURA / TIPO DE PROPIEDAD
   if (estado.etapa === "apertura") {
     if (detectaTipoPropiedad(texto)) {
       estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
       estado.etapa = "continuidad";
+      return estado;
+    }
+
+    if (ultimoFueTipoPropiedadNoValido(estado)) {
+      estado = guardarHistorial(estado, texto, "TIPO_PROPIEDAD_FINAL");
+      estado.etapa = "apertura";
       return estado;
     }
 
@@ -340,6 +366,7 @@ function actualizarEstado(mensaje, estadoActual) {
   estado.etapa = "orientable";
   return estado;
 }
+
 function decidirSiguienteAccion(estado) {
   const categoria = estado?.ultimaAccionEstado || "APERTURA";
 
@@ -350,6 +377,7 @@ function decidirSiguienteAccion(estado) {
       derivar: false
     };
   }
+
   if (categoria === "TIPO_PROPIEDAD_NO_VALIDO") {
     return {
       respuesta: elegir("TIPO_PROPIEDAD_NO_VALIDO", estado),
@@ -365,6 +393,7 @@ function decidirSiguienteAccion(estado) {
       derivar: false
     };
   }
+
   if (categoria === "PREGUNTAR_CONTINUIDAD" || categoria === "PREGUNTAR_INTENCION") {
     return {
       respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado),
