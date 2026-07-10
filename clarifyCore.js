@@ -38,24 +38,34 @@ const RESPUESTAS = {
   ],
 
   PREGUNTAR_REFERENCIA_ECONOMICA: [
-    "Perfecto.\n\nPara orientarnos mejor también nos sirve una referencia económica aproximada.\n\nNo hace falta que sea un monto exacto. Puede ser un presupuesto estimado, un crédito aprobado o cualquier referencia que hoy tengas.\n\n¿Con qué presupuesto aproximado o referencia económica contás hoy?"
+    "Bien.\n\nPara orientarnos mejor también nos sirve una referencia económica aproximada.\n\nNo hace falta que sea un monto exacto. Puede ser un presupuesto estimado, un crédito aprobado o cualquier referencia que hoy tengas.\n\n¿Con qué presupuesto aproximado o referencia económica contás hoy?"
+  ],
+
+  REFERENCIA_ECONOMICA_NO_VALIDA: [
+    "No pude identificar una referencia económica para orientar la búsqueda.\n\nNo hace falta que sea un monto exacto. Puede ser un presupuesto aproximado, un crédito aprobado o cualquier otra referencia económica."
+  ],
+
+  REFERENCIA_ECONOMICA_FINAL: [
+    "Todavía no pude identificar esa información.\n\nCuando quieras retomar la búsqueda, respondé la pregunta anterior y seguimos desde ahí."
+  ],
+
+  PEDIR_DESCRIPCION_LIBRE: [
+    "Bien.\n\nYa contamos con la información mínima para continuar.\n\nAhora nos gustaría conocer un poco mejor la propiedad que estás buscando.\n\nPodés contarnos todo lo que consideres importante.\n\nPor ejemplo:\n• zona o ubicación\n• medidas o metros cuadrados\n• cantidad de dormitorios\n• cochera\n• patio\n• balcón\n• jardín\n• servicios\n• acceso\n• características del terreno\n• o cualquier otra característica que para vos sea importante."
   ],
 
   ORIENTABLE: [
-    "Perfecto.\n\nYa tenemos una base para empezar.\n\nSi en algún momento querés sumar un dato o cambia algo, podés escribirnos cuando quieras."
+    "Gracias por compartir esa información.\n\nCon lo que nos contaste ya podemos empezar a trabajar en tu búsqueda.\n\nSi aparece una propiedad compatible con lo que estás buscando, nos vamos a comunicar con vos.\n\nA partir de ahora seguimos nosotros. Si en algún momento cambia alguna prioridad o querés agregar información, escribinos. Mantener tu búsqueda actualizada aumenta las posibilidades de que podamos identificar una propiedad compatible con lo que estás buscando."
   ],
 
   MENSAJE_REGISTRABLE: [
-    "Perfecto, quedó registrado.\n\nCualquier cambio o dato nuevo que quieras sumar, podés escribirnos cuando quieras.",
-    "Bien, lo dejamos anotado.\n\nSi más adelante querés agregar o modificar algo, podés hacerlo por acá.",
-    "Entendido, quedó registrado.\n\nSeguimos teniendo en cuenta la información que vayas sumando.",
-    "Gracias, lo registramos para considerarlo dentro de la búsqueda."
+    "Perfecto, quedó registrado.",
+    "Gracias por compartir esa información.",
+    "Entendido, quedó registrado.",
+    "Bien, lo dejamos anotado."
   ],
 
   CONSULTA_ESTADO: [
-    "Tu búsqueda sigue registrada.\n\nPara no hacerte perder tiempo, sólo nos comunicamos cuando aparece algún indicio compatible con lo que estás buscando.",
-    "Seguimos teniendo en cuenta tu búsqueda.\n\nNi bien aparezca una oportunidad compatible, nos vamos a comunicar.",
-    "Por el momento no tenemos novedades concretas para compartir.\n\nSi aparece algo que tenga sentido para vos, te vamos a escribir."
+    "Tu búsqueda continúa activa.\n\nSi aparece una oportunidad compatible con lo que nos fuiste contando, nos pondremos en contacto con vos.\n\nMientras tanto, si cambia alguna prioridad o querés agregar información, podés escribirnos cuando quieras."
   ],
 
   CORTESIA: [
@@ -142,18 +152,6 @@ function guardarHistorial(estado, mensajeOriginal, categoria) {
   };
 }
 
-function esEntradaGenerica(texto) {
-  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
-
-  if (!t) return true;
-
-  return (
-    /^(hola|ola|halo|buenas|buen dia|buenas tardes|buenas noches|info|informacion|consulta|contame)$/.test(t) ||
-    t.length <= 3 ||
-    /(vi un anuncio|vengo del anuncio|quiero saber mas|quiero info|pasame info|de que se trata|como funciona|cómo funciona|me pasaron este numero|me paso este numero|me pasaron el numero|mi amiga me paso este numero|mi amigo me paso este numero|ustedes consiguen propiedades|ustedes buscan propiedades|consiguen propiedades|buscan propiedades)/.test(t)
-  );
-}
-
 function esCortesia(texto) {
   const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
 
@@ -169,7 +167,7 @@ function esMalestar(texto) {
 function esConsultaEstado(texto) {
   const t = normalizar(texto);
 
-  return /(como va|cómo va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio algo|apareció algo|aparecio|apareció|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa|estado de la busqueda|estado de la búsqueda)/.test(t);
+  return /(como va|cómo va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio algo|apareció algo|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa|estado de la busqueda|estado de la búsqueda)/.test(t);
 }
 
 function requiereOperador(texto) {
@@ -184,7 +182,7 @@ function detectaTipoPropiedad(texto) {
   return (
     /\b(casa|casita|casona|vivienda|propiedad)\b/.test(t) ||
     /\b(departamento|departamemto|departameto|depto|monoambiente)\b/.test(t) ||
-    /\b(terreno|tereno|terrenoo|lote|lotes)\b/.test(t) ||
+    /\b(terreno|tereno|terrenoo|lote|lotes|chacra|chacras|campo|campos)\b/.test(t) ||
     /\b(quinta|qunta|duplex|dúplex|ph)\b/.test(t)
   );
 }
@@ -209,18 +207,11 @@ function detectaRespuestaVisita(texto) {
   return null;
 }
 
-function ultimoFueTipoPropiedadNoValido(estado) {
+function ultimoFue(estado, categoria) {
   const historial = Array.isArray(estado?.historial) ? estado.historial : [];
   const ultimo = historial[historial.length - 1];
 
-  return ultimo?.categoria === "TIPO_PROPIEDAD_NO_VALIDO";
-}
-
-function ultimoFueContinuidadNoValido(estado) {
-  const historial = Array.isArray(estado?.historial) ? estado.historial : [];
-  const ultimo = historial[historial.length - 1];
-
-  return ultimo?.categoria === "CONTINUIDAD_NO_VALIDO";
+  return ultimo?.categoria === categoria;
 }
 
 function detectaReferenciaEconomica(texto) {
@@ -283,7 +274,6 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // Después de orientable: guardar todo y responder seguro.
   if (estado.orientable) {
     if (esMalestar(texto)) {
       estado.requiereOperador = true;
@@ -316,9 +306,6 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // Antes de orientable: preguntar lo mínimo.
-
-  // 1. APERTURA / TIPO DE PROPIEDAD
   if (estado.etapa === "apertura") {
     if (detectaTipoPropiedad(texto)) {
       estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
@@ -326,7 +313,7 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    if (ultimoFueTipoPropiedadNoValido(estado)) {
+    if (ultimoFue(estado, "TIPO_PROPIEDAD_NO_VALIDO")) {
       estado = guardarHistorial(estado, texto, "TIPO_PROPIEDAD_FINAL");
       estado.etapa = "cerrado";
       return estado;
@@ -337,7 +324,6 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // 2. CONTINUIDAD / VISITA
   if (estado.etapa === "continuidad") {
     if (esMalestar(texto)) {
       estado.requiereOperador = true;
@@ -362,7 +348,7 @@ function actualizarEstado(mensaje, estadoActual) {
     const respuestaVisita = detectaRespuestaVisita(texto);
 
     if (respuestaVisita === true) {
-      estado.intencion = texto;
+      estado.intencion = true;
       estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
       estado.etapa = "referenciaEconomica";
       return estado;
@@ -375,7 +361,7 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    if (ultimoFueContinuidadNoValido(estado)) {
+    if (ultimoFue(estado, "CONTINUIDAD_NO_VALIDO")) {
       estado = guardarHistorial(estado, texto, "CONTINUIDAD_FINAL");
       estado.etapa = "cerrado";
       return estado;
@@ -386,7 +372,6 @@ function actualizarEstado(mensaje, estadoActual) {
     return estado;
   }
 
-  // 3. REFERENCIA ECONOMICA
   if (estado.etapa === "referenciaEconomica" && !estado.referenciaEconomica) {
     if (esMalestar(texto)) {
       estado.requiereOperador = true;
@@ -415,15 +400,41 @@ function actualizarEstado(mensaje, estadoActual) {
     }
 
     if (detectaReferenciaEconomica(texto)) {
-      estado.referenciaEconomica = texto;
-      estado.orientable = true;
-      estado = guardarHistorial(estado, texto, "ORIENTABLE");
-      estado.etapa = "orientable";
+      estado.referenciaEconomica = true;
+      estado = guardarHistorial(estado, texto, "PEDIR_DESCRIPCION_LIBRE");
+      estado.etapa = "descripcionLibre";
       return estado;
     }
 
-    estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+    if (ultimoFue(estado, "REFERENCIA_ECONOMICA_NO_VALIDA")) {
+      estado = guardarHistorial(estado, texto, "REFERENCIA_ECONOMICA_FINAL");
+      estado.etapa = "cerrado";
+      return estado;
+    }
+
+    estado = guardarHistorial(estado, texto, "REFERENCIA_ECONOMICA_NO_VALIDA");
     estado.etapa = "referenciaEconomica";
+    return estado;
+  }
+
+  if (estado.etapa === "descripcionLibre") {
+    if (esMalestar(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "MALESTAR");
+      estado.etapa = "descripcionLibre";
+      return estado;
+    }
+
+    if (requiereOperador(texto)) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
+      estado.etapa = "descripcionLibre";
+      return estado;
+    }
+
+    estado.orientable = true;
+    estado = guardarHistorial(estado, texto, "ORIENTABLE");
+    estado.etapa = "orientable";
     return estado;
   }
 
@@ -435,107 +446,67 @@ function decidirSiguienteAccion(estado) {
   const categoria = estado?.ultimaAccionEstado || "APERTURA";
 
   if (categoria === "APERTURA") {
-    return {
-      respuesta: elegir("APERTURA", estado),
-      accion: "APERTURA",
-      derivar: false
-    };
+    return { respuesta: elegir("APERTURA", estado), accion: "APERTURA", derivar: false };
   }
 
   if (categoria === "TIPO_PROPIEDAD_NO_VALIDO") {
-    return {
-      respuesta: elegir("TIPO_PROPIEDAD_NO_VALIDO", estado),
-      accion: "TIPO_PROPIEDAD_NO_VALIDO",
-      derivar: false
-    };
+    return { respuesta: elegir("TIPO_PROPIEDAD_NO_VALIDO", estado), accion: "TIPO_PROPIEDAD_NO_VALIDO", derivar: false };
   }
 
   if (categoria === "TIPO_PROPIEDAD_FINAL") {
-    return {
-      respuesta: elegir("TIPO_PROPIEDAD_FINAL", estado),
-      accion: "TIPO_PROPIEDAD_FINAL",
-      derivar: false
-    };
+    return { respuesta: elegir("TIPO_PROPIEDAD_FINAL", estado), accion: "TIPO_PROPIEDAD_FINAL", derivar: false };
   }
 
   if (categoria === "PREGUNTAR_CONTINUIDAD" || categoria === "PREGUNTAR_INTENCION") {
-    return {
-      respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado),
-      accion: "PREGUNTAR_CONTINUIDAD",
-      derivar: false
-    };
+    return { respuesta: elegir("PREGUNTAR_CONTINUIDAD", estado), accion: "PREGUNTAR_CONTINUIDAD", derivar: false };
   }
 
   if (categoria === "CONTINUIDAD_NO_VALIDO") {
-    return {
-      respuesta: elegir("CONTINUIDAD_NO_VALIDO", estado),
-      accion: "CONTINUIDAD_NO_VALIDO",
-      derivar: false
-    };
+    return { respuesta: elegir("CONTINUIDAD_NO_VALIDO", estado), accion: "CONTINUIDAD_NO_VALIDO", derivar: false };
   }
 
   if (categoria === "CONTINUIDAD_FINAL") {
-    return {
-      respuesta: elegir("CONTINUIDAD_FINAL", estado),
-      accion: "CONTINUIDAD_FINAL",
-      derivar: false
-    };
+    return { respuesta: elegir("CONTINUIDAD_FINAL", estado), accion: "CONTINUIDAD_FINAL", derivar: false };
   }
 
   if (categoria === "CONTINUIDAD_NO") {
-    return {
-      respuesta: elegir("CONTINUIDAD_NO", estado),
-      accion: "CONTINUIDAD_NO",
-      derivar: false
-    };
+    return { respuesta: elegir("CONTINUIDAD_NO", estado), accion: "CONTINUIDAD_NO", derivar: false };
   }
 
   if (categoria === "PREGUNTAR_REFERENCIA_ECONOMICA") {
-    return {
-      respuesta: elegir("PREGUNTAR_REFERENCIA_ECONOMICA", estado),
-      accion: "PREGUNTAR_REFERENCIA_ECONOMICA",
-      derivar: false
-    };
+    return { respuesta: elegir("PREGUNTAR_REFERENCIA_ECONOMICA", estado), accion: "PREGUNTAR_REFERENCIA_ECONOMICA", derivar: false };
+  }
+
+  if (categoria === "REFERENCIA_ECONOMICA_NO_VALIDA") {
+    return { respuesta: elegir("REFERENCIA_ECONOMICA_NO_VALIDA", estado), accion: "REFERENCIA_ECONOMICA_NO_VALIDA", derivar: false };
+  }
+
+  if (categoria === "REFERENCIA_ECONOMICA_FINAL") {
+    return { respuesta: elegir("REFERENCIA_ECONOMICA_FINAL", estado), accion: "REFERENCIA_ECONOMICA_FINAL", derivar: false };
+  }
+
+  if (categoria === "PEDIR_DESCRIPCION_LIBRE") {
+    return { respuesta: elegir("PEDIR_DESCRIPCION_LIBRE", estado), accion: "PEDIR_DESCRIPCION_LIBRE", derivar: false };
   }
 
   if (categoria === "ORIENTABLE") {
-    return {
-      respuesta: elegir("ORIENTABLE", estado),
-      accion: "ORIENTABLE",
-      derivar: false
-    };
+    return { respuesta: elegir("ORIENTABLE", estado), accion: "ORIENTABLE", derivar: false };
   }
 
   if (categoria === "CONSULTA_ESTADO") {
-    return {
-      respuesta: elegir("CONSULTA_ESTADO", estado),
-      accion: "CONSULTA_ESTADO",
-      derivar: false
-    };
+    return { respuesta: elegir("CONSULTA_ESTADO", estado), accion: "CONSULTA_ESTADO", derivar: false };
   }
 
   if (categoria === "CORTESIA") {
-    return {
-      respuesta: elegir("CORTESIA", estado),
-      accion: "CORTESIA",
-      derivar: false
-    };
+    return { respuesta: elegir("CORTESIA", estado), accion: "CORTESIA", derivar: false };
   }
 
   if (categoria === "MALESTAR") {
-    return {
-      respuesta: elegir("MALESTAR", estado),
-      accion: "MALESTAR",
-      derivar: true
-    };
+    return { respuesta: elegir("MALESTAR", estado), accion: "MALESTAR", derivar: true };
   }
 
   if (categoria === "REQUIERE_OPERADOR") {
-    return {
-      respuesta: elegir("REQUIERE_OPERADOR", estado),
-      accion: "REQUIERE_OPERADOR",
-      derivar: true
-    };
+    return { respuesta: elegir("REQUIERE_OPERADOR", estado), accion: "REQUIERE_OPERADOR", derivar: true };
   }
 
   return {
