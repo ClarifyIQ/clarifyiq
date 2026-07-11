@@ -10,7 +10,7 @@
 
 const RESPUESTAS = {
   APERTURA: [
-    "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?"
+    "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex / PH\n3. Departamento\n4. Terreno\n5. Quinta / Campo\n6. Local o propiedad comercial"
   ],
 
   TIPO_PROPIEDAD_NO_VALIDO: [
