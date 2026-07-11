@@ -158,6 +158,23 @@ function esCortesia(texto) {
   return /^(gracias|muchas gracias|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya)$/.test(t);
 }
 
+function preguntaPorCampo(campo) {
+  const preguntas = {
+    tipo_propiedad:
+      'Para activar la búsqueda:\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex / PH\n3. Departamento\n4. Terreno\n5. Quinta / Campo\n6. Local o propiedad comercial',
+    zona_o_criterio:
+      'Para activar la búsqueda:\n\n¿En qué zona te interesa o necesitás estar cerca de algo?',
+    presupuesto:
+      'Para activar la búsqueda:\n\n¿Con qué presupuesto te gustaría trabajar?',
+    dormitorios:
+      'Para que aparezcan opciones que encajen:\n\n¿Cuántos dormitorios necesitás?',
+    intencion:
+      'Para activar correctamente la búsqueda:\n\n¿Querés avanzar si aparece algo que encaje o estás evaluando opciones?'
+  };
+
+  return preguntas[campo] || 'Para activar la búsqueda:\n\nNecesito un dato más.';
+}
+
 function esMalestar(texto) {
   const t = normalizar(texto);
 
