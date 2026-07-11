@@ -234,41 +234,35 @@ function ultimoFue(estado, categoria) {
 function detectaReferenciaEconomica(texto) {
   const t = normalizar(texto);
 
-  if (
-    /(credito aprobado|crédito aprobado|prestamo aprobado|préstamo aprobado|preaprobado|pre aprobado|tengo un credito|tengo un crédito|cuento con financiacion|cuento con financiación)/.test(t)
-  ) {
-    return true;
+  if (!t) {
+    return false;
   }
 
-  if (
-    /(vendo|vender|vendiendo).*(me quedan|me queda|tendria|tendría|voy a tener|quedarian|quedarían)/.test(t)
-  ) {
-    return true;
+  const tieneContextoEconomico =
+    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|referencia economica|referencia económica|aproximado|aprox|alcanzo|me alcanza|me quedan|me queda|puedo avanzar|puedo comprar|avanzar|compra|comprar|venta previa|si vendo|si vendo primero|vendo|vender|vendiendo|pesos|peso|dolar|dólar|dolares|dólares|usd|u\$s|millones?|mil|k)/.test(t);
+
+  const tieneCantidad = /\d/.test(t);
+
+  const esDescripcionPropiedad =
+    /(metros|m2|m²|habitacion|habitaciones|dormitorio|dormitorios|cochera|patio|balcon|balcón|jardin|jardín|superficie|medida|medidas|calle|avenida|direccion|dirección|numero|número|lote|frente|fondo)/.test(t);
+
+  if (esDescripcionPropiedad && !tieneContextoEconomico) {
+    return false;
   }
 
-  if (
-    /(no lo tengo definido|no tengo definido|no se exactamente|no sé exactamente|estoy viendo opciones|estoy evaluando|depende de lo que aparezca|depende si vendo primero|si vendo primero)/.test(t)
-  ) {
-    return true;
+  if (!tieneCantidad && !tieneContextoEconomico) {
+    return false;
   }
 
-  const referenciaEnPalabras =
-    /\b(cien|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos)\s+mil\b/.test(t) ||
-    /\b(un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+millones?\b/.test(t);
+  const tieneReferenciaExplicita =
+    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|referencia economica|referencia económica|aproximado|aprox|venta previa|si vendo|si vendo primero|me alcanza|me quedan|me queda|puedo avanzar|puedo comprar|compra|comprar)/.test(t);
 
-  if (referenciaEnPalabras) {
-    return true;
-  }
+  const tieneMontoConContexto =
+    (/(pesos|peso|dolar|dólar|dolares|dólares|usd|u\$s|millones?|mil|k)/.test(t) &&
+      /(hasta|aproximado|aprox|presupuesto|monto|disponible|referencia|compra|comprar|avanzar|puedo|alcanzo|me alcanza|busco|buscando)/.test(t)) ||
+    /((si|cuando)\s+vendo|venta previa)/.test(t);
 
-  const tieneNumero = /\d/.test(t);
-
-  const hablaDeDinero =
-    /(usd|u\$s|us\$|dolar|dólar|dolares|dólares|verdes|lucas|k|millones|millon|millón|pesos|peso|capital|presupuesto|inversion|inversión|tengo|dispongo|cuento con|hasta|me puedo estirar)/.test(t) ||
-    /\b\d+\s*mil\b/.test(t);
-
-  const numeroGrande = /\b\d{5,}\b/.test(t.replace(/[.\s]/g, ""));
-
-  return (tieneNumero && hablaDeDinero) || numeroGrande;
+  return tieneReferenciaExplicita || tieneMontoConContexto;
 }
 
 function actualizarEstado(mensaje, estadoActual) {
