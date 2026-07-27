@@ -45,6 +45,10 @@ const RESPUESTAS = {
     "No pude identificar una referencia económica para orientar la búsqueda.\n\nNo hace falta que sea un monto exacto. Puede ser un presupuesto aproximado, un crédito aprobado o cualquier otra referencia económica."
   ],
 
+  REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO: [
+    "Para poder orientar la búsqueda necesitamos una referencia económica aproximada.\n\nPuede ser un presupuesto estimado, un crédito aprobado o cualquier otra referencia económica."
+  ],
+
   REFERENCIA_ECONOMICA_FINAL: [
     "Todavía no pude identificar esa información.\n\nCuando quieras retomar la búsqueda, respondé la pregunta anterior y seguimos desde ahí."
   ],
@@ -96,6 +100,7 @@ function crearEstadoInicial() {
     orientable: false,
     intencion: null,
     referenciaEconomica: null,
+    intentosReferenciaEconomica: 0,
     etapa: "apertura",
     ultimaAccionEstado: "APERTURA",
     requiereOperador: false,
@@ -121,6 +126,9 @@ function asegurarEstado(estadoActual) {
       estadoActual.referenciaEconomica ??
       estadoActual.presupuesto ??
       null,
+    intentosReferenciaEconomica: Number.isInteger(estadoActual.intentosReferenciaEconomica)
+      ? estadoActual.intentosReferenciaEconomica
+      : 0,
     etapa: etapaAnterior,
     ultimaAccionEstado: accionAnterior,
     requiereOperador: Boolean(estadoActual.requiereOperador),
@@ -429,8 +437,10 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    if (ultimoFue(estado, "REFERENCIA_ECONOMICA_NO_VALIDA")) {
-      estado = guardarHistorial(estado, texto, "REFERENCIA_ECONOMICA_FINAL");
+    estado.intentosReferenciaEconomica = (estado.intentosReferenciaEconomica || 0) + 1;
+
+    if (estado.intentosReferenciaEconomica >= 2) {
+      estado = guardarHistorial(estado, texto, "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO");
       estado.etapa = "cerrado";
       return estado;
     }
@@ -502,6 +512,10 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "REFERENCIA_ECONOMICA_NO_VALIDA") {
     return { respuesta: elegir("REFERENCIA_ECONOMICA_NO_VALIDA", estado), accion: "REFERENCIA_ECONOMICA_NO_VALIDA", derivar: false };
+  }
+
+  if (categoria === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO") {
+    return { respuesta: elegir("REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO", estado), accion: "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO", derivar: false };
   }
 
   if (categoria === "REFERENCIA_ECONOMICA_FINAL") {
