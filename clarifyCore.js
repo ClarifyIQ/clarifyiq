@@ -50,7 +50,7 @@ const RESPUESTAS = {
   ],
 
   PEDIR_DESCRIPCION_LIBRE: [
-    "Bien.\n\nYa contamos con la información mínima para continuar.\n\nAhora nos gustaría conocer un poco mejor la propiedad que estás buscando.\n\nPodés contarnos todo lo que consideres importante.\n\nPor ejemplo:\n• zona o ubicación\n• medidas o metros cuadrados\n• cantidad de dormitorios\n• cochera\n• patio\n• balcón\n• jardín\n• servicios\n• acceso\n• características del terreno\n• o cualquier otra característica que para vos sea importante."
+    "Contanos todo lo que puedas sobre lo que estás buscando. Podés agregar detalles como zona, características o cualquier cosa que para vos sea importante. Cuanta más información compartas, mejor podremos acompañarte."
   ],
 
   ORIENTABLE: [
