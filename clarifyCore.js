@@ -300,6 +300,12 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.etapa === "cerrado") {
+    if (estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO") {
+      estado.ultimaAccionEstado = "REFERENCIA_ECONOMICA_FINAL";
+      estado.etapa = "cerrado";
+      return estado;
+    }
+
     estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
     estado.etapa = "cerrado";
     return estado;
