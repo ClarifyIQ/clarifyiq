@@ -252,11 +252,23 @@ function detectaReferenciaEconomica(texto) {
   const tieneReferenciaEconomicaExplícita =
     /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|dinero|parte de pago|aporte|aporto|aportar|entrada|me alcanza|alcanzo|puedo pagar|puedo avanzar|pagar|pago)/.test(t);
 
-  const tieneMonto =
-    /\b\d+(?:[.,]\d+)?\s*(?:mil|miles|millones?|millon|k|usd|u\$s|pesos|dólares|dolar|dólar)\b/.test(t);
+  const tieneMontoNumerico =
+    /(?:^|\s)(?:usd|u\$s|\$)?\s*(?:\d{5,}|\d{1,3}(?:[.\s]\d{3})+)(?:\s*(?:usd|u\$s|pesos|dolares?|lucas?))?(?:$|\s|[.,;:!?])/.test(t);
 
-  const tieneContextoParaMonto =
-    /(tengo|quiero|necesito|dispongo|disponible|presupuesto|monto|pagar|pago|credito|crédito|financiacion|financiación|financiamiento|aprox|aproximado|aproximada|hasta|parte de pago|aporte|aporto|aportar|alcanzo|me alcanza|puedo|avanzar|entrada|entrego|entregar|vender|venta)/.test(t);
+  const tieneMontoConUnidad =
+    /\b\d+(?:[.,]\d+)?\s*(?:mil|miles|millones?|millon|k|lucas?|usd|u\$s|pesos|dolares?)\b/.test(t);
+
+  const tieneMontoEnPalabras =
+    /\b(?:un|uno|una|cien|ciento|doscientos|doscientas|trescientos|trescientas|cuatrocientos|cuatrocientas|quinientos|quinientas|seiscientos|seiscientas|setecientos|setecientas|ochocientos|ochocientas|novecientos|novecientas)\s+(?:mil|miles|lucas?|millones?|millon)\b/.test(t);
+
+  const tieneMontoExpresadoConCeros =
+    /\b(?:un|uno|1)\s+con\s+(?:cinco|seis|siete|ocho|nueve|5|6|7|8|9)\s+ceros?\b/.test(t);
+
+  const tieneMonto =
+    tieneMontoNumerico ||
+    tieneMontoConUnidad ||
+    tieneMontoEnPalabras ||
+    tieneMontoExpresadoConCeros;
 
   const tienePropiedadComoParteDePago =
     /(propiedad|casa|departamento|terreno|ph|duplex|lote|quinta|local).*?(parte de pago|como parte de pago|aporte|aporto|aportar)/.test(t) ||
@@ -282,7 +294,7 @@ function detectaReferenciaEconomica(texto) {
     return true;
   }
 
-  return tieneMonto && tieneContextoParaMonto;
+  return tieneMonto;
 }
 
 function actualizarEstado(mensaje, estadoActual) {
