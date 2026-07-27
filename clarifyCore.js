@@ -238,31 +238,43 @@ function detectaReferenciaEconomica(texto) {
     return false;
   }
 
-  const tieneContextoEconomico =
-    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|referencia economica|referencia económica|aproximado|aprox|alcanzo|me alcanza|me quedan|me queda|puedo avanzar|puedo comprar|avanzar|compra|comprar|venta previa|si vendo|si vendo primero|vendo|vender|vendiendo|pesos|peso|dolar|dólar|dolares|dólares|usd|u\$s|millones?|mil|k)/.test(t);
+  const tieneDuda =
+    /(no se|no sé|no tengo claro|no tengo idea|no estoy seguro|no estoy segura|estoy viendo|estoy evaluando|estoy mirando|viendo opciones|opciones)/.test(t);
 
-  const tieneCantidad = /\d/.test(t);
+  const tieneReferenciaEconomicaExplícita =
+    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|dinero|parte de pago|aporte|aporto|aportar|entrada|me alcanza|alcanzo|puedo pagar|puedo avanzar|pagar|pago)/.test(t);
+
+  const tieneMonto =
+    /\b\d+(?:[.,]\d+)?\s*(?:mil|miles|millones?|millon|k|usd|u\$s|pesos|dólares|dolar|dólar)\b/.test(t);
+
+  const tieneContextoParaMonto =
+    /(tengo|quiero|necesito|dispongo|disponible|presupuesto|monto|pagar|pago|credito|crédito|financiacion|financiación|financiamiento|aprox|aproximado|aproximada|hasta|parte de pago|aporte|aporto|aportar|alcanzo|me alcanza|puedo|avanzar|entrada|entrego|entregar|vender|venta)/.test(t);
+
+  const tienePropiedadComoParteDePago =
+    /(propiedad|casa|departamento|terreno|ph|duplex|lote|quinta|local).*?(parte de pago|como parte de pago|aporte|aporto|aportar)/.test(t) ||
+    /(parte de pago|como parte de pago|aporte|aporto|aportar).*(propiedad|casa|departamento|terreno|ph|duplex|lote|quinta|local)/.test(t) ||
+    /(entrego|entregar|aporto|aporte).*(casa|propiedad|terreno|departamento|ph|duplex|lote|quinta|local)/.test(t);
 
   const esDescripcionPropiedad =
-    /(metros|m2|m²|habitacion|habitaciones|dormitorio|dormitorios|cochera|patio|balcon|balcón|jardin|jardín|superficie|medida|medidas|calle|avenida|direccion|dirección|numero|número|lote|frente|fondo)/.test(t);
+    /(metros|m2|m²|habitacion|habitaciones|dormitorio|dormitorios|cochera|patio|balcon|balcón|jardin|jardín|superficie|medida|medidas|calle|avenida|direccion|dirección|numero|número|lote|frente|fondo|ambientes|baños|baño)/.test(t);
 
-  if (esDescripcionPropiedad && !tieneContextoEconomico) {
+  if (tieneDuda && !tieneReferenciaEconomicaExplícita && !tieneMonto && !tienePropiedadComoParteDePago) {
     return false;
   }
 
-  if (!tieneCantidad && !tieneContextoEconomico) {
+  if (esDescripcionPropiedad && !tieneReferenciaEconomicaExplícita && !tieneMonto && !tienePropiedadComoParteDePago) {
     return false;
   }
 
-  const tieneReferenciaExplicita =
-    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|referencia economica|referencia económica|aproximado|aprox|venta previa|si vendo|si vendo primero|me alcanza|me quedan|me queda|puedo avanzar|puedo comprar|compra|comprar)/.test(t);
+  if (tienePropiedadComoParteDePago) {
+    return true;
+  }
 
-  const tieneMontoConContexto =
-    (/(pesos|peso|dolar|dólar|dolares|dólares|usd|u\$s|millones?|mil|k)/.test(t) &&
-      /(hasta|aproximado|aprox|presupuesto|monto|disponible|referencia|compra|comprar|avanzar|puedo|alcanzo|me alcanza|busco|buscando)/.test(t)) ||
-    /((si|cuando)\s+vendo|venta previa)/.test(t);
+  if (tieneReferenciaEconomicaExplícita) {
+    return true;
+  }
 
-  return tieneReferenciaExplicita || tieneMontoConContexto;
+  return tieneMonto && tieneContextoParaMonto;
 }
 
 function actualizarEstado(mensaje, estadoActual) {
