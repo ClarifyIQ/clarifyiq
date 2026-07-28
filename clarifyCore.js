@@ -186,7 +186,7 @@ function preguntaPorCampo(campo) {
 function esMalestar(texto) {
   const t = normalizar(texto);
 
-  return /(no me siento acompanado|no me siento acompañado|contestan cualquier cosa|no entendieron|no me entendieron|esto no sirve|me estan haciendo perder tiempo|me están haciendo perder tiempo|no sirve|cualquier cosa ustedes|responden cualquier cosa)/.test(t);
+  return /(no me siento acompanado|no me siento acompañado|contestan cualquier cosa|no entendieron|no me entendieron|esto no sirve|me estan haciendo perder tiempo|me están haciendo perder tiempo|es una perdida de tiempo|es perder el tiempo|no sirve|cualquier cosa ustedes|responden cualquier cosa)/.test(t);
 }
 
 function esConsultaEstado(texto) {
