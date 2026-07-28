@@ -362,7 +362,20 @@ function actualizarEstado(mensaje, estadoActual) {
       /(que|cuales).*(tienen|hay).*(propiedades|casas|departamentos|terrenos)/.test(textoNormalizado) ||
       /(cual|que).*(me recomendas|recomiendan|recomendacion)/.test(textoNormalizado);
 
-    if (esCambioEconomicoPosterior || esConsultaFueraDeAlcance) {
+    const esCambioImportanteBusqueda =
+      /(ahora\s+(quiero|prefiero)|cambie(\s+de\s+idea)?(\s+y)?(\s+ahora)?\s+(quiero|prefiero)|ya\s+no\s+(quiero|busco|prefiero)).*(casa|departamento|depto|terreno|lote|quinta|campo|duplex|ph|local)/.test(textoNormalizado);
+
+    const esCondicionEspecialOperacion =
+      /(puedo|quiero).*(entregar|pagar).*(una|otra|mi|con).*(propiedad|casa|departamento)/.test(textoNormalizado) ||
+      /tengo.*(propiedad|casa|departamento).*(para\s+entregar|parte\s+de\s+pago)/.test(textoNormalizado) ||
+      /(propiedad|casa|departamento).*(parte\s+de\s+pago)/.test(textoNormalizado);
+
+    if (
+      esCambioEconomicoPosterior ||
+      esConsultaFueraDeAlcance ||
+      esCambioImportanteBusqueda ||
+      esCondicionEspecialOperacion
+    ) {
       estado.requiereOperador = true;
       estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
       estado.etapa = "orientable";
