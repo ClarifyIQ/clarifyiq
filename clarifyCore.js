@@ -46,7 +46,7 @@ const RESPUESTAS = {
   ],
 
   REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO: [
-    "Para poder orientar la búsqueda necesitamos una referencia económica aproximada.\n\nPuede ser un presupuesto estimado, un crédito aprobado o cualquier otra referencia económica."
+    "Para poder orientarte necesitamos una referencia económica aproximada. Puede ser un presupuesto estimado, un crédito aprobado o una forma prevista de pago. Cuando tengas ese dato, respondeme esta pregunta y seguimos con tu búsqueda."
   ],
 
   REFERENCIA_ECONOMICA_FINAL: [
@@ -312,6 +312,17 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.etapa === "cerrado") {
+    const cerradoPorFaltaDeReferenciaEconomica =
+      estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO" ||
+      estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_FINAL";
+
+    if (cerradoPorFaltaDeReferenciaEconomica && detectaReferenciaEconomica(texto)) {
+      estado.referenciaEconomica = true;
+      estado = guardarHistorial(estado, texto, "PEDIR_DESCRIPCION_LIBRE");
+      estado.etapa = "descripcionLibre";
+      return estado;
+    }
+
     if (estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO") {
       estado.ultimaAccionEstado = "REFERENCIA_ECONOMICA_FINAL";
       estado.etapa = "cerrado";
