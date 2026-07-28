@@ -316,14 +316,14 @@ function actualizarEstado(mensaje, estadoActual) {
       estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO" ||
       estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_FINAL";
 
-    if (cerradoPorFaltaDeReferenciaEconomica && detectaReferenciaEconomica(texto)) {
-      estado.referenciaEconomica = true;
-      estado = guardarHistorial(estado, texto, "PEDIR_DESCRIPCION_LIBRE");
-      estado.etapa = "descripcionLibre";
-      return estado;
-    }
+    if (cerradoPorFaltaDeReferenciaEconomica) {
+      if (detectaReferenciaEconomica(texto)) {
+        estado.referenciaEconomica = true;
+        estado = guardarHistorial(estado, texto, "PEDIR_DESCRIPCION_LIBRE");
+        estado.etapa = "descripcionLibre";
+        return estado;
+      }
 
-    if (estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO") {
       estado.ultimaAccionEstado = "REFERENCIA_ECONOMICA_FINAL";
       estado.etapa = "cerrado";
       return estado;
