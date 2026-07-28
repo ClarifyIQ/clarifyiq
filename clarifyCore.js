@@ -349,6 +349,26 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
+    const textoNormalizado = normalizar(texto);
+
+    const esCambioEconomicoPosterior =
+      /(ahora|nuevo|nueva|aumento|subio|cambio|cambie|consegui).*(presupuesto|plata|dinero|capital|credito)/.test(textoNormalizado) ||
+      /tengo\s+(mas|mayor|otro|nuevo)\s+(presupuesto|capital|credito|dinero|plata)/.test(textoNormalizado) ||
+      /(cambio|cambie|cambiar|nueva|nuevo).*(forma|medio|modalidad).*(pago)/.test(textoNormalizado) ||
+      /(forma|medio|modalidad).*(pago).*(cambio|cambie|cambiar)/.test(textoNormalizado);
+
+    const esConsultaFueraDeAlcance =
+      /(que|cuales).*(propiedades|casas|departamentos|terrenos).*(disponibles|tienen|hay|ahora)/.test(textoNormalizado) ||
+      /(que|cuales).*(tienen|hay).*(propiedades|casas|departamentos|terrenos)/.test(textoNormalizado) ||
+      /(cual|que).*(me recomendas|recomiendan|recomendacion)/.test(textoNormalizado);
+
+    if (esCambioEconomicoPosterior || esConsultaFueraDeAlcance) {
+      estado.requiereOperador = true;
+      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     if (esConsultaEstado(texto)) {
       estado = guardarHistorial(estado, texto, "CONSULTA_ESTADO");
       estado.etapa = "orientable";
