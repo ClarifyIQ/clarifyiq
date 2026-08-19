@@ -61,6 +61,12 @@ const RESPUESTAS = {
     "Gracias por compartir esa información.\n\nCon lo que nos contaste ya podemos empezar a trabajar en tu búsqueda.\n\nSi aparece una propiedad compatible con lo que estás buscando, nos vamos a comunicar con vos.\n\nA partir de ahora seguimos nosotros. Si en algún momento cambia alguna prioridad o querés agregar información, escribinos. Mantener tu búsqueda actualizada aumenta las posibilidades de que podamos identificar una propiedad compatible con lo que estás buscando."
   ],
 
+  ACOMPANAMIENTO: [
+    "Gracias por escribirnos. Seguimos acompañando tu búsqueda.",
+    "Perfecto, recibimos tu mensaje y seguimos atentos a tu búsqueda.",
+    "Gracias por mantenernos al tanto. Seguimos acompañándote en este proceso."
+  ],
+
   MENSAJE_REGISTRABLE: [
     "Perfecto, quedó registrado.",
     "Gracias por compartir esa información.",
@@ -335,66 +341,7 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.orientable) {
-    if (esMalestar(texto)) {
-      estado.requiereOperador = true;
-      estado = guardarHistorial(estado, texto, "MALESTAR");
-      estado.etapa = "orientable";
-      return estado;
-    }
-
-    if (requiereOperador(texto)) {
-      estado.requiereOperador = true;
-      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
-      estado.etapa = "orientable";
-      return estado;
-    }
-
-    const textoNormalizado = normalizar(texto);
-
-    const esCambioEconomicoPosterior =
-      /(ahora|nuevo|nueva|aumento|subio|cambio|cambie|consegui).*(presupuesto|plata|dinero|capital|credito)/.test(textoNormalizado) ||
-      /tengo\s+(mas|mayor|otro|nuevo)\s+(presupuesto|capital|credito|dinero|plata)/.test(textoNormalizado) ||
-      /(cambio|cambie|cambiar|nueva|nuevo).*(forma|medio|modalidad).*(pago)/.test(textoNormalizado) ||
-      /(forma|medio|modalidad).*(pago).*(cambio|cambie|cambiar)/.test(textoNormalizado);
-
-    const esConsultaFueraDeAlcance =
-      /(que|cuales).*(propiedades|casas|departamentos|terrenos).*(disponibles|tienen|hay|ahora)/.test(textoNormalizado) ||
-      /(que|cuales).*(tienen|hay).*(propiedades|casas|departamentos|terrenos)/.test(textoNormalizado) ||
-      /(cual|que).*(me recomendas|recomiendan|recomendacion)/.test(textoNormalizado);
-
-    const esCambioImportanteBusqueda =
-      /(ahora\s+(quiero|prefiero)|cambie(\s+de\s+idea)?(\s+y)?(\s+ahora)?\s+(quiero|prefiero)|ya\s+no\s+(quiero|busco|prefiero)).*(casa|departamento|depto|terreno|lote|quinta|campo|duplex|ph|local)/.test(textoNormalizado);
-
-    const esCondicionEspecialOperacion =
-      /(?:puedo\s+|quiero\s+)?(?:entregar|pagar).*(?:un\s*a|otra|mi|con).*(?:propiedad|casa|departamento)/.test(textoNormalizado) ||
-      /tengo.*(propiedad|casa|departamento).*(para\s+entregar|parte\s+de\s+pago)/.test(textoNormalizado) ||
-      /(propiedad|casa|departamento).*(parte\s+de\s+pago)/.test(textoNormalizado);
-
-    if (
-      esCambioEconomicoPosterior ||
-      esConsultaFueraDeAlcance ||
-      esCambioImportanteBusqueda ||
-      esCondicionEspecialOperacion
-    ) {
-      estado.requiereOperador = true;
-      estado = guardarHistorial(estado, texto, "REQUIERE_OPERADOR");
-      estado.etapa = "orientable";
-      return estado;
-    }
-
-    if (esConsultaEstado(texto)) {
-      estado = guardarHistorial(estado, texto, "CONSULTA_ESTADO");
-      estado.etapa = "orientable";
-      return estado;
-    }
-
-    if (esCortesia(texto)) {
-      estado = guardarHistorial(estado, texto, "CORTESIA");
-      estado.etapa = "orientable";
-      return estado;
-    }
-
-    estado = guardarHistorial(estado, texto, "MENSAJE_REGISTRABLE");
+    estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
     return estado;
   }
@@ -590,6 +537,10 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "ORIENTABLE") {
     return { respuesta: elegir("ORIENTABLE", estado), accion: "ORIENTABLE", derivar: false };
+  }
+
+  if (categoria === "ACOMPANAMIENTO") {
+    return { respuesta: elegir("ACOMPANAMIENTO", estado), accion: "ACOMPANAMIENTO", derivar: false };
   }
 
   if (categoria === "CONSULTA_ESTADO") {
