@@ -54,7 +54,7 @@ const RESPUESTAS = {
   ],
 
   PEDIR_DESCRIPCION_LIBRE: [
-    "Perfecto, gracias por compartir esa información.\n\nCon lo que nos contaste ya tenemos una primera referencia de tu búsqueda.\n\nA partir de ahora podés agregar todo lo que consideres importante:\n\n- zonas donde te gustaría vivir;\n- características que necesitás;\n- prioridades personales o familiares;\n- cualquier detalle que pueda ayudarnos a comprender mejor tu búsqueda.\n\nToda la información que compartas queda registrada y será tenida en cuenta para acompañarte mejor.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
+    "Perfecto.\n\nA partir de ahora vamos a construir tu búsqueda teniendo en cuenta todo lo que para vos sea importante.\n\nPodés seguir escribiendo por este medio y agregar los detalles que consideres importantes.\n\nCada dato que compartas aporta valor y nos ayuda a comprender mejor qué estás buscando.\n\nPodés contarnos, por ejemplo:\n\n- la zona donde te gustaría vivir;\n- si necesitás estar cerca del trabajo, familia, colegios u otros lugares importantes;\n- características que para vos sean importantes de la propiedad;\n- prioridades personales o familiares;\n- cualquier información que pueda ayudarnos a identificar opciones más compatibles con tu búsqueda.\n\nToda la información que compartas queda registrada y ayuda a mantener tu búsqueda actualizada y activa. Cada nuevo dato nos permite comprender mejor tus necesidades y acompañarte durante el proceso.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
   ],
 
   ORIENTABLE: [
@@ -214,7 +214,8 @@ function detectaTipoPropiedad(texto) {
     /\b(casa|casita|casona|vivienda|propiedad)\b/.test(t) ||
     /\b(departamento|departamemto|departameto|depto|monoambiente)\b/.test(t) ||
     /\b(terreno|tereno|terrenoo|lote|lotes|chacra|chacras|campo|campos)\b/.test(t) ||
-    /\b(quinta|qunta|duplex|dúplex|ph)\b/.test(t)
+    /\b(quinta|qunta|duplex|dúplex|ph|local|comercio)\b/.test(t) ||
+    /\bpropiedad comercial\b/.test(t)
   );
 }
 
