@@ -58,7 +58,7 @@ const RESPUESTAS = {
   ],
 
   ORIENTABLE: [
-    "Gracias por compartir esa información.\n\nCon lo que nos contaste ya podemos empezar a trabajar en tu búsqueda.\n\nSi aparece una propiedad compatible con lo que estás buscando, nos vamos a comunicar con vos.\n\nA partir de ahora seguimos nosotros. Si en algún momento cambia alguna prioridad o querés agregar información, escribinos. Mantener tu búsqueda actualizada aumenta las posibilidades de que podamos identificar una propiedad compatible con lo que estás buscando."
+    "Perfecto.\n\nA partir de ahora vamos a construir tu búsqueda teniendo en cuenta todo lo que para vos sea importante.\n\nPodés seguir escribiendo por este medio y agregar los detalles que consideres importantes.\n\nCada dato que compartas aporta valor y nos ayuda a comprender mejor qué estás buscando.\n\nPodés contarnos, por ejemplo:\n\n- la zona donde te gustaría vivir;\n- si necesitás estar cerca del trabajo, familia, colegios u otros lugares importantes;\n- características que para vos sean importantes de la propiedad;\n- prioridades personales o familiares;\n- cualquier información que pueda ayudarnos a identificar opciones más compatibles con tu búsqueda.\n\nToda la información que compartas queda registrada y ayuda a mantener tu búsqueda actualizada y activa. Cada nuevo dato nos permite comprender mejor tus necesidades y acompañarte durante el proceso.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
   ],
 
   ACOMPANAMIENTO: [
