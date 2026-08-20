@@ -476,7 +476,7 @@ function actualizarEstado(mensaje, estadoActual) {
     }
 
     estado.orientable = true;
-    estado = guardarHistorial(estado, texto, "ORIENTABLE");
+    estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
     return estado;
   }
