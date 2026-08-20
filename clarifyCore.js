@@ -62,9 +62,9 @@ const RESPUESTAS = {
   ],
 
   ACOMPANAMIENTO: [
-    "Gracias por escribirnos. Seguimos acompañando tu búsqueda.",
-    "Perfecto, recibimos tu mensaje y seguimos atentos a tu búsqueda.",
-    "Gracias por mantenernos al tanto. Seguimos acompañándote en este proceso."
+    "Perfecto, lo dejamos registrado.\nDurante una búsqueda pueden aparecer nuevos detalles, cambios o prioridades.\nPodés compartirlos por este medio, porque toda esa información nos ayuda a identificar opciones más compatibles con lo que estás buscando.\nUn asesor revisará tu caso y se comunicará con vos para seguir acompañándote.",
+    "Entendido, quedó incorporado a tu búsqueda.\nPodés seguir sumando cualquier información que consideres importante: cambios, preferencias, dudas o nuevos datos.\nLa idea es acompañarte durante el proceso y tener en cuenta qué es importante para vos.\nUn asesor se comunicará con vos para continuar personalmente la búsqueda.",
+    "Gracias por compartir esa información.\nQuedó registrada junto con los datos de tu búsqueda.\nPodés seguir agregando cualquier detalle, cambio o consulta que consideres importante. Todo lo que nos compartas nos ayuda a comprender mejor qué estás buscando.\nUn asesor revisará la información de tu búsqueda y se comunicará con vos para continuar acompañándote personalmente."
   ],
 
   MENSAJE_REGISTRABLE: [
