@@ -54,7 +54,7 @@ const RESPUESTAS = {
   ],
 
   PEDIR_DESCRIPCION_LIBRE: [
-    "Contanos todo lo que puedas sobre lo que estás buscando. Podés agregar detalles como zona, características o cualquier cosa que para vos sea importante. Cuanta más información compartas, mejor podremos acompañarte."
+    "Perfecto, gracias por compartir esa información.\n\nCon lo que nos contaste ya tenemos una primera referencia de tu búsqueda.\n\nA partir de ahora podés agregar todo lo que consideres importante:\n\n- zonas donde te gustaría vivir;\n- características que necesitás;\n- prioridades personales o familiares;\n- cualquier detalle que pueda ayudarnos a comprender mejor tu búsqueda.\n\nToda la información que compartas queda registrada y será tenida en cuenta para acompañarte mejor.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
   ],
 
   ORIENTABLE: [
