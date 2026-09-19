@@ -39,6 +39,7 @@ function crearChatwootAdapter({ env = process.env, http = axios } = {}) {
   }
 
   function extraerContacto(data) {
+    if (Array.isArray(data?.payload)) return data.payload[0];
     return data?.payload?.contact || data?.contact || data?.payload || data;
   }
 
