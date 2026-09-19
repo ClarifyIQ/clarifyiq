@@ -52,7 +52,12 @@ function telefonoDePayload(payload) {
   );
 }
 
-function crearManejadorChatwoot({ env = process.env, enviarMeta, now = Date.now } = {}) {
+function crearManejadorChatwoot({
+  env = process.env,
+  enviarMeta,
+  actualizarEstadoMensaje,
+  now = Date.now
+} = {}) {
   const vistos = new Map();
 
   function limpiarVistos(ahora) {
@@ -99,6 +104,20 @@ function crearManejadorChatwoot({ env = process.env, enviarMeta, now = Date.now 
     try {
       await enviarMeta(telefono, texto);
       vistos.set(deliveryId, ahora);
+
+      if (actualizarEstadoMensaje) {
+        try {
+          await actualizarEstadoMensaje(payload.conversation?.id, payload.id, 'sent');
+        } catch (error) {
+          // El mensaje ya salió por WhatsApp. No se devuelve 500 porque Chatwoot
+          // podría reintentar el webhook y duplicar el envío al cliente.
+          console.error(
+            'No se pudo actualizar el estado del mensaje en Chatwoot:',
+            error.response?.data || error.message
+          );
+        }
+      }
+
       return res.sendStatus(200);
     } catch (error) {
       console.error('Error enviando respuesta humana a Meta:', error.response?.data || error.message);
