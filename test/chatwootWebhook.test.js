@@ -79,3 +79,58 @@ test('extrae el teléfono del contacto de la conversación', () => {
     conversation: { meta: { sender: { phone_number: '+54 9 376 123-4567' } } }
   }), '5493761234567');
 });
+
+test('marca como enviado en Chatwoot después de entregarlo a Meta', async () => {
+  const now = 1_800_000_000_000;
+  const timestamp = String(now / 1000);
+  const payload = {
+    id: 20,
+    event: 'message_created',
+    message_type: 'outgoing',
+    private: false,
+    sender_type: 'User',
+    account: { id: 185048 },
+    inbox: { id: 137532 },
+    content: 'Hola',
+    conversation: {
+      id: 10,
+      meta: { sender: { phone_number: '+54 9 376 123-4567' } }
+    }
+  };
+  const rawBody = JSON.stringify(payload);
+  const headers = {
+    'x-chatwoot-timestamp': timestamp,
+    'x-chatwoot-signature': firmaEsperada('secreto', timestamp, rawBody),
+    'x-chatwoot-delivery': 'entrega-1'
+  };
+  const llamadasMeta = [];
+  const estados = [];
+  const manejador = require('../chatwootWebhook').crearManejadorChatwoot({
+    env: {
+      CHATWOOT_ENABLED: 'true',
+      CHATWOOT_WEBHOOK_SECRET: 'secreto',
+      CHATWOOT_ACCOUNT_ID: '185048',
+      CHATWOOT_INBOX_ID: '137532'
+    },
+    enviarMeta: async (...args) => llamadasMeta.push(args),
+    actualizarEstadoMensaje: async (...args) => estados.push(args),
+    now: () => now
+  });
+  const req = {
+    rawBody: Buffer.from(rawBody),
+    body: payload,
+    get: nombre => headers[nombre.toLowerCase()]
+  };
+  const res = {
+    sendStatus(codigo) {
+      this.codigo = codigo;
+      return this;
+    }
+  };
+
+  await manejador(req, res);
+
+  assert.equal(res.codigo, 200);
+  assert.deepEqual(llamadasMeta, [['5493761234567', 'Hola']]);
+  assert.deepEqual(estados, [[10, 20, 'sent']]);
+});
