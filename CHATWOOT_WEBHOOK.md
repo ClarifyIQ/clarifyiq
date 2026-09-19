@@ -11,6 +11,14 @@ Chatwoot funciona únicamente como bandeja para la atención humana mediante un 
 - `CHATWOOT_INBOX_ID`
 - `CHATWOOT_API_ACCESS_TOKEN`
 - `CHATWOOT_WEBHOOK_SECRET`
+- `CLARIFYIQ_DB_PATH=/data/db.json`
+
+## Persistencia de conversaciones
+
+En Railway se debe montar un volumen persistente en `/data` y configurar
+`CLARIFYIQ_DB_PATH=/data/db.json`. De este modo, el estado de cada búsqueda se
+conserva después de despliegues y reinicios. Sin esa variable, el desarrollo
+local continúa usando `db.json` dentro del proyecto.
 
 ## Webhook de Chatwoot
 
