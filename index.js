@@ -32,7 +32,11 @@ function crearApp({ env = process.env, chatwoot, procesador, enviarMeta } = {}) 
     chatwoot: adapter,
     enviarMeta: enviar
   });
-  const manejarChatwoot = crearManejadorChatwoot({ env, enviarMeta: enviar });
+  const manejarChatwoot = crearManejadorChatwoot({
+    env,
+    enviarMeta: enviar,
+    actualizarEstadoMensaje: adapter.actualizarEstadoMensaje
+  });
 
   app.get('/', (_req, res) => {
     res.send('ClarifyIQ - prueba local');

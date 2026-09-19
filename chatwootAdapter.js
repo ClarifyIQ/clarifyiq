@@ -199,10 +199,22 @@ function crearChatwootAdapter({ env = process.env, http = axios } = {}) {
     await crearMensaje(conversationId, content, { privado: true });
   }
 
+  async function actualizarEstadoMensaje(conversationId, messageId, status, externalError) {
+    const cuerpo = { status };
+    if (status === 'failed' && externalError) cuerpo.external_error = externalError;
+
+    return http.patch(
+      url(`/conversations/${conversationId}/messages/${messageId}`),
+      cuerpo,
+      opciones()
+    );
+  }
+
   return {
     estaConfigurado,
     registrarEntrada,
     agregarNotaPrivada,
+    actualizarEstadoMensaje,
     estadoAsignacion
   };
 }

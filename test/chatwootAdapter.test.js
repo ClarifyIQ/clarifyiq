@@ -163,3 +163,23 @@ test('reutiliza contacto y conversación abiertos', async () => {
   assert.equal(posts.length, 1);
   assert.ok(posts[0][0].endsWith('/conversations/5/messages'));
 });
+
+test('actualiza el estado de entrega de un mensaje', async () => {
+  const llamadas = [];
+  const http = {
+    patch: async (...args) => {
+      llamadas.push(args);
+      return { data: { status: 'sent' } };
+    }
+  };
+  const adapter = crearChatwootAdapter({ env, http });
+
+  await adapter.actualizarEstadoMensaje(10, 20, 'sent');
+
+  assert.equal(
+    llamadas[0][0],
+    'https://app.chatwoot.com/api/v1/accounts/185048/conversations/10/messages/20'
+  );
+  assert.deepEqual(llamadas[0][1], { status: 'sent' });
+  assert.equal(llamadas[0][2].headers.api_access_token, 'token-prueba');
+});
