@@ -87,6 +87,43 @@ test('crea contacto, conversación y mensaje entrante', async () => {
   ));
 });
 
+test('acepta la estructura documentada al crear un contacto', async () => {
+  const http = {
+    get: async (url) => {
+      if (url.endsWith('/contacts/search')) return { data: { payload: [] } };
+      if (url.endsWith('/contacts/71/conversations')) return { data: { payload: [] } };
+      if (url.endsWith('/conversations/901')) {
+        return { data: { id: 901, meta: { assignee: null } } };
+      }
+      throw new Error(`GET inesperado: ${url}`);
+    },
+    post: async (url) => {
+      if (url.endsWith('/contacts')) {
+        return {
+          data: {
+            payload: [{
+              id: 71,
+              phone_number: '+5491',
+              contact_inboxes: [{ inbox: { id: 137532 }, source_id: 'fuente-71' }]
+            }]
+          }
+        };
+      }
+      if (url.endsWith('/conversations')) return { data: { id: 901 } };
+      if (url.endsWith('/conversations/901/messages')) return { data: { id: 902 } };
+      throw new Error(`POST inesperado: ${url}`);
+    }
+  };
+
+  const resultado = await crearChatwootAdapter({ env, http }).registrarEntrada({
+    telefono: '5491',
+    texto: 'Necesito patio'
+  });
+
+  assert.equal(resultado.contactId, 71);
+  assert.equal(resultado.conversationId, 901);
+});
+
 test('reutiliza contacto y conversación abiertos', async () => {
   const posts = [];
   const http = {
