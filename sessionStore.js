@@ -1,21 +1,29 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'db.json');
+function obtenerRutaDB() {
+  return process.env.CLARIFYIQ_DB_PATH || path.join(__dirname, 'db.json');
+}
 
-function leerDB() {
+function leerDB(dbPath = obtenerRutaDB()) {
   try {
-    const data = fs.readFileSync(DB_PATH, 'utf8');
+    const data = fs.readFileSync(dbPath, 'utf8');
     return JSON.parse(data);
   } catch (err) {
     const base = { conversaciones: {} };
-    escribirDB(base);
+    escribirDB(base, dbPath);
     return base;
   }
 }
 
-function escribirDB(db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+function escribirDB(db, dbPath = obtenerRutaDB()) {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+  // Escribir primero un archivo temporal evita dejar un JSON incompleto si el
+  // proceso se interrumpe durante la escritura.
+  const temporal = `${dbPath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporal, JSON.stringify(db, null, 2));
+  fs.renameSync(temporal, dbPath);
 }
 
 function obtenerSesion(telefono) {
@@ -35,4 +43,11 @@ function eliminarSesion(telefono) {
   escribirDB(db);
 }
 
-module.exports = { obtenerSesion, guardarSesion, eliminarSesion };
+module.exports = {
+  obtenerRutaDB,
+  leerDB,
+  escribirDB,
+  obtenerSesion,
+  guardarSesion,
+  eliminarSesion
+};
