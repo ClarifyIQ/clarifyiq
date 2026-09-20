@@ -56,3 +56,20 @@ test('retoma tipo de propiedad después de cerrar por respuestas inválidas', ()
   assert.equal(estado.etapa, 'continuidad');
   assert.equal(estado.ultimaAccionEstado, 'PREGUNTAR_CONTINUIDAD');
 });
+
+test('no acepta frases vagas como referencia económica', () => {
+  for (const respuesta of ['Me alcanza', 'Puedo pagar', 'Puedo avanzar']) {
+    const estado = avanzar(['Hola', 'Casa', 'Si', respuesta]);
+
+    assert.equal(estado.referenciaEconomica, null);
+    assert.equal(estado.etapa, 'referenciaEconomica');
+    assert.equal(estado.ultimaAccionEstado, 'REFERENCIA_ECONOMICA_NO_VALIDA');
+  }
+});
+
+test('acepta una frase con un monto económico concreto', () => {
+  const estado = avanzar(['Hola', 'Casa', 'Si', 'Me alcanza para USD 50000']);
+
+  assert.equal(estado.referenciaEconomica, true);
+  assert.equal(estado.etapa, 'descripcionLibre');
+});
