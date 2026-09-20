@@ -173,7 +173,21 @@ function guardarHistorial(estado, mensajeOriginal, categoria) {
 function esCortesia(texto) {
   const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
 
-  return /^(gracias|muchas gracias|mil gracias|te agradezco|muy amable|que amable|qué amable|amable|agradecido|agradecida|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya|saludos|hasta luego|nos vemos|igual para vos)$/.test(t);
+  const contieneDatoDeBusqueda =
+    /\b(quiero|quisiera|necesito|busco|prefiero|tambien|ademas|pero|cambio|cambiar|agregar|sumar|presupuesto|credito|zona|barrio|casa|departamento|terreno|dormitorio|habitacion|patio|pileta|cochera|jardin|arboles)\b/.test(t);
+
+  if (contieneDatoDeBusqueda) {
+    return false;
+  }
+
+  const cortesiaExacta =
+    /^(gracias|muchas gracias|muchisimas gracias|mil gracias|gracias por todo|te agradezco|se agradece|muy amable|que amable|amable|agradecido|agradecida|muy agradecido|muy agradecida|ok|okay|dale|perfecto|excelente|genial|buenisimo|barbaro|espectacular|maravilloso|listo|joya|de acuerdo|esta bien|me parece bien|entendido|comprendido|claro|correcto|bueno|saludos|un saludo|hasta luego|hasta pronto|hasta manana|nos vemos|hablamos|seguimos en contacto|buen fin de semana|chau|chao|adios|igualmente|igual para vos|lo mismo para vos|gracias a vos|de nada|no hay de que|por nada|a disposicion)$/.test(t);
+
+  const cortesiaContextual =
+    /\b(estoy conforme|quede conforme|muy conforme|voy a recomendarlos|los voy a recomendar|los recomendare|excelente atencion|muy buena atencion|buen servicio|muy buen servicio)\b/.test(t) &&
+    /\b(gracias|agradezco|conforme|recomendar|recomendarlos|recomendare|atencion|servicio)\b/.test(t);
+
+  return cortesiaExacta || cortesiaContextual;
 }
 
 function esSaludo(texto) {
