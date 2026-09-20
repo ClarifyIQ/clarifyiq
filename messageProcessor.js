@@ -60,6 +60,8 @@ function crearProcesadorMensajes({
     let sesion = obtener(telefono);
     if (!sesion) sesion = crearEstadoInicial();
 
+    const yaEraOrientable = Boolean(sesion.orientable);
+
     const estado = actualizarEstado(texto, sesion);
     const accion = decidirSiguienteAccion(estado);
 
@@ -74,7 +76,10 @@ function crearProcesadorMensajes({
     let registro;
     try {
       registro = await chatwoot.registrarEntrada({ telefono, texto });
-      if (registro.newConversation) {
+      // Chatwoot puede reutilizar una conversación abierta de una búsqueda
+      // anterior. El resumen pertenece al comienzo de cada búsqueda orientable,
+      // no solamente a la creación de una conversación en Chatwoot.
+      if (registro.newConversation || !yaEraOrientable) {
         await chatwoot.agregarNotaPrivada(
           registro.conversationId,
           crearNotaInicial(estado)
