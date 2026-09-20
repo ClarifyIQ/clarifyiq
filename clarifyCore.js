@@ -83,6 +83,10 @@ const RESPUESTAS = {
     "Gracias a vos.\n\nSeguimos teniendo en cuenta tu búsqueda."
   ],
 
+  SALUDO: [
+    "Hola.\n\nTu búsqueda sigue activa. Cuando quieras, podés agregar información o consultar novedades."
+  ],
+
   MALESTAR: [
     "Gracias por comentarlo.\n\nEste mensaje será revisado por un operador para darle seguimiento.",
     "Lamento que lo sientas así.\n\nUn operador va a revisar este mensaje para darle mejor seguimiento."
@@ -170,6 +174,12 @@ function esCortesia(texto) {
   const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
 
   return /^(gracias|muchas gracias|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya)$/.test(t);
+}
+
+function esSaludo(texto) {
+  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
+
+  return /^(hola|holi|buen dia|buenos dias|buenas tardes|buenas noches|buenas)$/.test(t);
 }
 
 function preguntaPorCampo(campo) {
@@ -387,6 +397,18 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.orientable) {
+    if (esSaludo(texto)) {
+      estado = guardarHistorial(estado, texto, "SALUDO");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
+    if (esCortesia(texto)) {
+      estado = guardarHistorial(estado, texto, "CORTESIA");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
     return estado;
@@ -595,6 +617,10 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "CORTESIA") {
     return { respuesta: elegir("CORTESIA", estado), accion: "CORTESIA", derivar: false };
+  }
+
+  if (categoria === "SALUDO") {
+    return { respuesta: elegir("SALUDO", estado), accion: "SALUDO", derivar: false };
   }
 
   if (categoria === "MALESTAR") {
