@@ -244,7 +244,7 @@ function esSenalUrgencia(texto) {
     return false;
   }
 
-  return /(estoy ansioso|estoy ansiosa|me urge|es urgente|urgente|lo necesito ya|necesito mudarme ya|quiero comprar ya|necesito comprar pronto|lo antes posible|cuanto antes|cuanto tarda|cuanto demoran|tiempo aproximado|tardan mucho|demoran mucho|para cuando|necesito resolver|se me vence el alquiler|tengo que mudarme|puedo visitar hoy|puedo ir hoy)/.test(t);
+  return /(estoy ansioso|estoy ansiosa|estoy apurado|estoy apurada|tengo apuro|me urge|es urgente|urgente|lo necesito ya|necesito mudarme ya|quiero comprar ya|necesito comprar pronto|necesito conseguir pronto|lo antes posible|cuanto antes|cuanto tarda|cuanto demoran|tiempo aproximado|tardan mucho|demoran mucho|para cuando|necesito resolver|se me vence el alquiler|tengo que mudarme|puedo visitar hoy|puedo ir hoy)/.test(t);
 }
 
 function requiereOperador(texto) {
