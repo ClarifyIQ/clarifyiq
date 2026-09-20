@@ -106,6 +106,36 @@ test('detecta cortesías que no contienen la palabra gracias', () => {
   }
 });
 
+test('detecta agradecimiento y conformidad expresados en contexto', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Voy a recomendarlos, estoy conforme, gracias'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.etapa, 'orientable');
+  assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
+});
+
+test('no descarta un dato de búsqueda incluido junto con un agradecimiento', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Gracias, pero también quiero árboles'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.etapa, 'orientable');
+  assert.equal(estado.ultimaAccionEstado, 'ACOMPANAMIENTO');
+});
+
 test('detecta un saludo después de llegar a orientable', () => {
   const estado = avanzar([
     'Hola',
