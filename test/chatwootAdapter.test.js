@@ -186,3 +186,22 @@ test('actualiza el estado de entrega de un mensaje', async () => {
   assert.deepEqual(llamadas[0][1], { status: 'sent' });
   assert.equal(llamadas[0][2].headers.api_access_token, 'token-prueba');
 });
+
+test('marca una conversación con prioridad alta', async () => {
+  const llamadas = [];
+  const http = {
+    post: async (...args) => {
+      llamadas.push(args);
+      return { data: { priority: 'high' } };
+    }
+  };
+  const adapter = crearChatwootAdapter({ env, http });
+
+  await adapter.actualizarPrioridad(15, 'high');
+
+  assert.equal(
+    llamadas[0][0],
+    'https://app.chatwoot.com/api/v1/accounts/185048/conversations/15/toggle_priority'
+  );
+  assert.deepEqual(llamadas[0][1], { priority: 'high' });
+});

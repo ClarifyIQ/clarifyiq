@@ -87,6 +87,10 @@ const RESPUESTAS = {
     "Hola.\n\nTu búsqueda sigue activa. Cuando quieras, podés agregar información o consultar novedades."
   ],
 
+  SEGUIMIENTO_PRIORITARIO: [
+    "Entiendo.\n\nDejamos registrada tu necesidad de avanzar. Tu búsqueda sigue activa y un asesor revisará tu caso con prioridad.\n\nSi tenés una fecha límite, también podés compartirla."
+  ],
+
   MALESTAR: [
     "Gracias por comentarlo.\n\nEste mensaje será revisado por un operador para darle seguimiento.",
     "Lamento que lo sientas así.\n\nUn operador va a revisar este mensaje para darle mejor seguimiento."
@@ -114,6 +118,7 @@ function crearEstadoInicial() {
     etapa: "apertura",
     ultimaAccionEstado: "APERTURA",
     requiereOperador: false,
+    seguimientoPrioritario: false,
     historial: []
   };
 }
@@ -142,6 +147,7 @@ function asegurarEstado(estadoActual) {
     etapa: etapaAnterior,
     ultimaAccionEstado: accionAnterior,
     requiereOperador: Boolean(estadoActual.requiereOperador),
+    seguimientoPrioritario: Boolean(estadoActual.seguimientoPrioritario),
     historial: Array.isArray(estadoActual.historial)
       ? estadoActual.historial
       : []
@@ -229,6 +235,16 @@ function esConsultaEstado(texto) {
   const t = normalizar(texto);
 
   return /(como va|cómo va|como viene|hay novedades|alguna novedad|novedad|novedades|aparecio algo|apareció algo|hay algo|tienen algo|algo para mi|en que quedo|en qué quedó|sigue registrada|sigue activa|estado de la busqueda|estado de la búsqueda)/.test(t);
+}
+
+function esSenalUrgencia(texto) {
+  const t = normalizar(texto);
+
+  if (/(no tengo apuro|sin apuro|no es urgente|no hay apuro|cuando puedan)/.test(t)) {
+    return false;
+  }
+
+  return /(estoy ansioso|estoy ansiosa|me urge|es urgente|urgente|lo necesito ya|necesito mudarme ya|quiero comprar ya|necesito comprar pronto|lo antes posible|cuanto antes|cuanto tarda|cuanto demoran|tiempo aproximado|tardan mucho|demoran mucho|para cuando|necesito resolver|se me vence el alquiler|tengo que mudarme|puedo visitar hoy|puedo ir hoy)/.test(t);
 }
 
 function requiereOperador(texto) {
@@ -429,6 +445,13 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
+    if (esSenalUrgencia(texto)) {
+      estado.seguimientoPrioritario = true;
+      estado = guardarHistorial(estado, texto, "SEGUIMIENTO_PRIORITARIO");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
     return estado;
@@ -563,6 +586,14 @@ function actualizarEstado(mensaje, estadoActual) {
     }
 
     estado.orientable = true;
+
+    if (esSenalUrgencia(texto)) {
+      estado.seguimientoPrioritario = true;
+      estado = guardarHistorial(estado, texto, "SEGUIMIENTO_PRIORITARIO");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
     return estado;
@@ -641,6 +672,10 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "SALUDO") {
     return { respuesta: elegir("SALUDO", estado), accion: "SALUDO", derivar: false };
+  }
+
+  if (categoria === "SEGUIMIENTO_PRIORITARIO") {
+    return { respuesta: elegir("SEGUIMIENTO_PRIORITARIO", estado), accion: "SEGUIMIENTO_PRIORITARIO", derivar: false };
   }
 
   if (categoria === "MALESTAR") {

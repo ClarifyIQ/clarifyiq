@@ -28,7 +28,8 @@ function crearNotaInicial(estado) {
     'Resumen automático de CLARIFYIQ',
     `Etapa: ${estado.etapa}`,
     `Intención de visita: ${intencion}`,
-    `Referencia económica: ${referencia}`
+    `Referencia económica: ${referencia}`,
+    `Seguimiento prioritario: ${estado.seguimientoPrioritario ? 'Sí' : 'No'}`
   ].join('\n');
 }
 
@@ -61,6 +62,7 @@ function crearProcesadorMensajes({
     if (!sesion) sesion = crearEstadoInicial();
 
     const yaEraOrientable = Boolean(sesion.orientable);
+    const yaEraPrioritario = Boolean(sesion.seguimientoPrioritario);
 
     const estado = actualizarEstado(texto, sesion);
     const accion = decidirSiguienteAccion(estado);
@@ -88,6 +90,18 @@ function crearProcesadorMensajes({
     } catch (error) {
       console.error('Error sincronizando con Chatwoot:', error.response?.data || error.message);
       return { estado, accion, respuestaAutomatica: false, chatwoot: 'error' };
+    }
+
+    if (estado.seguimientoPrioritario && !yaEraPrioritario) {
+      try {
+        await chatwoot.actualizarPrioridad?.(registro.conversationId, 'high');
+        await chatwoot.agregarNotaPrivada(
+          registro.conversationId,
+          'CLARIFYIQ: seguimiento prioritario\nSe detectó una señal de urgencia o necesidad de avance. El bot continúa activo hasta que un operador decida asignarse la conversación.'
+        );
+      } catch (error) {
+        console.error('No se pudo marcar la prioridad en Chatwoot:', error.response?.data || error.message);
+      }
     }
 
     // Ante una asignación incierta se prioriza no duplicar al operador.

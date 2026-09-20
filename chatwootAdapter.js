@@ -238,6 +238,15 @@ function crearChatwootAdapter({ env = process.env, http = axios } = {}) {
     await crearMensaje(conversationId, content, { privado: true });
   }
 
+  async function actualizarPrioridad(conversationId, priority = 'high') {
+    if (!estaConfigurado()) return;
+    return http.post(
+      url(`/conversations/${conversationId}/toggle_priority`),
+      { priority },
+      opciones()
+    );
+  }
+
   async function actualizarEstadoMensaje(conversationId, messageId, status, externalError) {
     const cuerpo = { status };
     if (status === 'failed' && externalError) cuerpo.external_error = externalError;
@@ -253,6 +262,7 @@ function crearChatwootAdapter({ env = process.env, http = axios } = {}) {
     estaConfigurado,
     registrarEntrada,
     agregarNotaPrivada,
+    actualizarPrioridad,
     actualizarEstadoMensaje,
     estadoAsignacion
   };
