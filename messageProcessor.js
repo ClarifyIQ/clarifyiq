@@ -11,6 +11,8 @@ const {
   guardarSesion
 } = require('./sessionStore');
 
+const { crearGoogleSheetsSync } = require('./googleSheetsSync');
+
 function crearNotaInicial(estado) {
   const intencion = estado.intencion === true
     ? 'Sí'
@@ -55,9 +57,10 @@ function crearProcesadorMensajes({
   chatwoot,
   obtener = obtenerSesion,
   guardar = guardarSesion,
-  enviarMeta = enviarMensajeMeta
+  enviarMeta = enviarMensajeMeta,
+  sheetsSync = crearGoogleSheetsSync()
 } = {}) {
-  async function procesar({ telefono, texto }) {
+  async function procesar({ telefono, texto, nombre }) {
     let sesion = obtener(telefono);
     if (!sesion) sesion = crearEstadoInicial();
 
@@ -69,6 +72,19 @@ function crearProcesadorMensajes({
 
     // Guardar antes de cualquier llamada externa evita perder el avance del usuario.
     guardar(telefono, estado);
+
+    // La planilla es un apoyo operativo. Si Google está lento o no disponible,
+    // WhatsApp y Chatwoot deben continuar funcionando sin demoras ni bloqueos.
+    if (estado.orientable && sheetsSync?.sincronizarBusqueda) {
+      Promise.resolve()
+        .then(() => sheetsSync.sincronizarBusqueda({ telefono, nombre, estado }))
+        .catch(error => {
+          console.error(
+            'Error sincronizando búsqueda con Google Sheets:',
+            error.response?.data || error.message
+          );
+        });
+    }
 
     if (!estado.orientable || !chatwoot?.estaConfigurado()) {
       await enviarMeta(telefono, accion.respuesta);
