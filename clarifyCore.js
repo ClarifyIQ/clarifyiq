@@ -276,7 +276,7 @@ function detectaReferenciaEconomica(texto) {
     /(no se|no sé|no tengo claro|no tengo idea|no estoy seguro|no estoy segura|estoy viendo|estoy evaluando|estoy mirando|viendo opciones|opciones)/.test(t);
 
   const tieneReferenciaEconomicaExplícita =
-    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|dinero|parte de pago|aporte|aporto|aportar|entrada|me alcanza|alcanzo|puedo pagar|puedo avanzar|pagar|pago)/.test(t);
+    /(credito|crédito|financiacion|financiación|financiamiento|presupuesto|monto|disponible|dinero|parte de pago|aporte|aporto|aportar|entrada)/.test(t);
 
   const tieneMontoNumerico =
     /(?:^|\s)(?:usd|u\$s|\$)?\s*(?:\d{5,}|\d{1,3}(?:[.\s]\d{3})+)(?:\s*(?:usd|u\$s|pesos|dolares?|lucas?))?(?:$|\s|[.,;:!?])/.test(t);
