@@ -173,7 +173,7 @@ function guardarHistorial(estado, mensajeOriginal, categoria) {
 function esCortesia(texto) {
   const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, "").trim();
 
-  return /^(gracias|muchas gracias|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya)$/.test(t);
+  return /^(gracias|muchas gracias|mil gracias|te agradezco|muy amable|que amable|qué amable|amable|agradecido|agradecida|ok|okay|dale|perfecto|buenisimo|buenísimo|genial|barbaro|bárbaro|listo|joya|saludos|hasta luego|nos vemos|igual para vos)$/.test(t);
 }
 
 function esSaludo(texto) {
