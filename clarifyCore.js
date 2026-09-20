@@ -223,7 +223,7 @@ function detectaRespuestaVisita(texto) {
   const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, " ").trim();
 
   if (
-    /^(1|si|sí|s|claro|dale|ok|okay|perfecto)$/.test(t) ||
+    /^(1|si|sí|s|yes|y|claro|dale|ok|okay|perfecto)$/.test(t) ||
     /(si coordinaria|sí coordinaria|si coordinaría|sí coordinaría|coordino|coordinaria|coordinaría|haria una visita|haría una visita|voy a verla|quiero verla|la iria a ver|la iría a ver|me interesa verla)/.test(t)
   ) {
     return true;
@@ -244,6 +244,25 @@ function ultimoFue(estado, categoria) {
   const ultimo = historial[historial.length - 1];
 
   return ultimo?.categoria === categoria;
+}
+
+function ultimoCierre(estado) {
+  const cierres = new Set([
+    "TIPO_PROPIEDAD_FINAL",
+    "CONTINUIDAD_FINAL",
+    "CONTINUIDAD_NO",
+    "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO",
+    "REFERENCIA_ECONOMICA_FINAL"
+  ]);
+  const historial = Array.isArray(estado?.historial) ? estado.historial : [];
+
+  for (let indice = historial.length - 1; indice >= 0; indice -= 1) {
+    if (cierres.has(historial[indice]?.categoria)) {
+      return historial[indice].categoria;
+    }
+  }
+
+  return null;
 }
 
 function detectaReferenciaEconomica(texto) {
@@ -319,9 +338,35 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.etapa === "cerrado") {
+    const motivoCierre = ultimoCierre(estado);
+
+    if (motivoCierre === "TIPO_PROPIEDAD_FINAL" && detectaTipoPropiedad(texto)) {
+      estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
+      estado.etapa = "continuidad";
+      return estado;
+    }
+
+    if (motivoCierre === "CONTINUIDAD_FINAL" || motivoCierre === "CONTINUIDAD_NO") {
+      const respuestaVisita = detectaRespuestaVisita(texto);
+
+      if (respuestaVisita === true) {
+        estado.intencion = true;
+        estado = guardarHistorial(estado, texto, "PREGUNTAR_REFERENCIA_ECONOMICA");
+        estado.etapa = "referenciaEconomica";
+        return estado;
+      }
+
+      if (respuestaVisita === false) {
+        estado.intencion = false;
+        estado = guardarHistorial(estado, texto, "CONTINUIDAD_NO");
+        estado.etapa = "cerrado";
+        return estado;
+      }
+    }
+
     const cerradoPorFaltaDeReferenciaEconomica =
-      estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO" ||
-      estado.ultimaAccionEstado === "REFERENCIA_ECONOMICA_FINAL";
+      motivoCierre === "REFERENCIA_ECONOMICA_NO_VALIDA_SEGUNDO_INTENTO" ||
+      motivoCierre === "REFERENCIA_ECONOMICA_FINAL";
 
     if (cerradoPorFaltaDeReferenciaEconomica) {
       if (detectaReferenciaEconomica(texto)) {
