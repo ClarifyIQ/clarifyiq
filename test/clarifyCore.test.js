@@ -178,3 +178,35 @@ test('detecta un saludo después de llegar a orientable', () => {
   assert.equal(estado.etapa, 'orientable');
   assert.equal(estado.ultimaAccionEstado, 'SALUDO');
 });
+ 
+test('marca como prioritarias las señales de ansiedad y demora', () => {
+  for (const mensaje of ['Estoy ansioso', 'Tardan mucho en encontrar', 'Tiempo aproximado en encontrar?']) {
+    const estado = avanzar([
+      'Hola',
+      'Casa',
+      'Si',
+      'USD 50000',
+      'Cinco dormitorios',
+      mensaje
+    ]);
+
+    assert.equal(estado.orientable, true);
+    assert.equal(estado.seguimientoPrioritario, true);
+    assert.equal(estado.ultimaAccionEstado, 'SEGUIMIENTO_PRIORITARIO');
+  }
+});
+
+test('no marca prioridad cuando el cliente aclara que no tiene apuro', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'No tengo apuro'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.seguimientoPrioritario, false);
+  assert.equal(estado.ultimaAccionEstado, 'ACOMPANAMIENTO');
+});
