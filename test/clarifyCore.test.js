@@ -89,6 +89,23 @@ test('detecta una cortesía después de llegar a orientable', () => {
   assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
 });
 
+test('detecta cortesías que no contienen la palabra gracias', () => {
+  for (const cortesia of ['Muy amable', 'Qué amable', 'Saludos', 'Hasta luego']) {
+    const estado = avanzar([
+      'Hola',
+      'Casa',
+      'Si',
+      'USD 50000',
+      'Cinco dormitorios',
+      cortesia
+    ]);
+
+    assert.equal(estado.orientable, true);
+    assert.equal(estado.etapa, 'orientable');
+    assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
+  }
+});
+
 test('detecta un saludo después de llegar a orientable', () => {
   const estado = avanzar([
     'Hola',
