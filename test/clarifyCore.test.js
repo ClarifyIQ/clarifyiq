@@ -196,6 +196,20 @@ test('marca como prioritarias las señales de ansiedad y demora', () => {
   }
 });
 
+test('marca como prioritaria una búsqueda expresada con apuro', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Estoy apurado en conseguir una propiedad'
+  ]);
+
+  assert.equal(estado.seguimientoPrioritario, true);
+  assert.equal(estado.ultimaAccionEstado, 'SEGUIMIENTO_PRIORITARIO');
+});
+
 test('no marca prioridad cuando el cliente aclara que no tiene apuro', () => {
   const estado = avanzar([
     'Hola',
