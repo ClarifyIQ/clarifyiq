@@ -120,6 +120,7 @@ function crearApp({ env = process.env, chatwoot, procesador, enviarMeta } = {}) 
       console.log('Estado flujo:', resultado.estado.etapa);
       console.log('Respuesta automática:', resultado.respuestaAutomatica);
       console.log('Chatwoot:', resultado.chatwoot);
+      console.log('Asignación Chatwoot:', resultado.assignmentStatus || 'no aplica');
 
       return res.sendStatus(200);
     } catch (error) {
