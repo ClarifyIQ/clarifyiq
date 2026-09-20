@@ -121,6 +121,34 @@ test('detecta agradecimiento y conformidad expresados en contexto', () => {
   assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
 });
 
+test('detecta un elogio contextual como cortesía', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Se pasan por la buena onda, altamente recomendables, muy amable'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
+});
+
+test('ignora emojis al detectar una cortesía', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Perfecto 👌'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
+});
+
 test('no descarta un dato de búsqueda incluido junto con un agradecimiento', () => {
   const estado = avanzar([
     'Hola',
