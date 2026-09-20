@@ -96,7 +96,8 @@ function crearApp({ env = process.env, chatwoot, procesador, enviarMeta } = {}) 
     try {
       console.log('Mensaje recibido de Meta');
 
-      const mensaje = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+      const valor = req.body.entry?.[0]?.changes?.[0]?.value;
+      const mensaje = valor?.messages?.[0];
       if (!mensaje) {
         console.log('Webhook sin mensaje de usuario. Se responde 200.');
         return res.sendStatus(200);
@@ -104,6 +105,7 @@ function crearApp({ env = process.env, chatwoot, procesador, enviarMeta } = {}) 
 
       const telefono = mensaje.from;
       const texto = mensaje.text?.body;
+      const nombre = valor?.contacts?.[0]?.profile?.name || '';
 
       // Primera versión: texto solamente. Los demás eventos se reconocen sin
       // alterar el estado de la conversación ni generar respuestas vacías.
@@ -115,7 +117,7 @@ function crearApp({ env = process.env, chatwoot, procesador, enviarMeta } = {}) 
       console.log('Teléfono:', telefono);
       console.log('Texto:', texto);
 
-      const resultado = await procesadorActivo.procesar({ telefono, texto });
+      const resultado = await procesadorActivo.procesar({ telefono, texto, nombre });
 
       console.log('Estado flujo:', resultado.estado.etapa);
       console.log('Respuesta automática:', resultado.respuestaAutomatica);
