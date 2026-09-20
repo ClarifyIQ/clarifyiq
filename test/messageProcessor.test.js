@@ -12,6 +12,7 @@ function estadoOrientable() {
     etapa: 'orientable',
     ultimaAccionEstado: 'ACOMPANAMIENTO',
     requiereOperador: false,
+    seguimientoPrioritario: false,
     historial: [{
       fecha: new Date().toISOString(),
       mensajeOriginal: 'USD 100000',
@@ -24,6 +25,7 @@ function dependencias({ estado = estadoOrientable(), configurado = true, registr
   const enviados = [];
   const entradas = [];
   const notas = [];
+  const prioridades = [];
   const guardados = [];
 
   const chatwoot = {
@@ -37,7 +39,8 @@ function dependencias({ estado = estadoOrientable(), configurado = true, registr
         assignmentStatus: 'unassigned'
       };
     },
-    agregarNotaPrivada: async (id, contenido) => notas.push([id, contenido])
+    agregarNotaPrivada: async (id, contenido) => notas.push([id, contenido]),
+    actualizarPrioridad: async (id, prioridad) => prioridades.push([id, prioridad])
   };
 
   const procesador = crearProcesadorMensajes({
@@ -47,7 +50,7 @@ function dependencias({ estado = estadoOrientable(), configurado = true, registr
     enviarMeta: async (telefono, texto) => enviados.push([telefono, texto])
   });
 
-  return { procesador, chatwoot, enviados, entradas, notas, guardados };
+  return { procesador, chatwoot, enviados, entradas, notas, prioridades, guardados };
 }
 
 test('antes de ser orientable responde por Meta sin abrir Chatwoot', async () => {
@@ -145,4 +148,20 @@ test('construye el resumen inicial con los datos disponibles', () => {
   const nota = crearNotaInicial(estadoOrientable());
   assert.match(nota, /Intención de visita: Sí/);
   assert.match(nota, /Referencia económica: USD 100000/);
+  assert.match(nota, /Seguimiento prioritario: No/);
+});
+
+test('marca prioridad en Chatwoot sin silenciar la respuesta automática', async () => {
+  const deps = dependencias();
+
+  const resultado = await deps.procesador.procesar({
+    telefono: '5491',
+    texto: 'Estoy ansioso, ¿cuánto tarda?'
+  });
+
+  assert.equal(resultado.estado.seguimientoPrioritario, true);
+  assert.equal(resultado.accion.accion, 'SEGUIMIENTO_PRIORITARIO');
+  assert.equal(resultado.respuestaAutomatica, true);
+  assert.deepEqual(deps.prioridades, [[50, 'high']]);
+  assert.ok(deps.notas.some(([, contenido]) => /seguimiento prioritario/.test(contenido)));
 });
