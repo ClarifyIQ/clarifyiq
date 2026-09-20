@@ -140,13 +140,52 @@ function crearChatwootAdapter({ env = process.env, http = axios } = {}) {
     return { conversacion, nueva };
   }
 
-  function estadoAsignacion(conversacion) {
-    if (conversacion?.meta && Object.prototype.hasOwnProperty.call(conversacion.meta, 'assignee')) {
-      return conversacion.meta.assignee ? 'assigned' : 'unassigned';
+  function extraerDetalleConversacion(data) {
+    const candidatos = [
+      data?.payload?.conversation,
+      data?.data?.conversation,
+      data?.payload,
+      data?.data,
+      data
+    ];
+
+    return candidatos.find(item =>
+      item &&
+      !Array.isArray(item) &&
+      typeof item === 'object' &&
+      (item.id || item.meta)
+    );
+  }
+
+  function tieneAgente(valor) {
+    if (!valor) return false;
+    if (typeof valor !== 'object') return Boolean(valor);
+    return Object.keys(valor).length > 0;
+  }
+
+  function estadoAsignacion(data) {
+    const conversacion = extraerDetalleConversacion(data);
+    if (!conversacion) return 'unknown';
+
+    if (conversacion.meta && Object.prototype.hasOwnProperty.call(conversacion.meta, 'assignee')) {
+      return tieneAgente(conversacion.meta.assignee) ? 'assigned' : 'unassigned';
     }
-    if (Object.prototype.hasOwnProperty.call(conversacion || {}, 'assignee_id')) {
+    if (Object.prototype.hasOwnProperty.call(conversacion, 'assignee')) {
+      return tieneAgente(conversacion.assignee) ? 'assigned' : 'unassigned';
+    }
+    if (conversacion.meta && Object.prototype.hasOwnProperty.call(conversacion.meta, 'assignee_id')) {
+      return conversacion.meta.assignee_id ? 'assigned' : 'unassigned';
+    }
+    if (Object.prototype.hasOwnProperty.call(conversacion, 'assignee_id')) {
       return conversacion.assignee_id ? 'assigned' : 'unassigned';
     }
+
+    // Algunas respuestas válidas de Chatwoot omiten "assignee" cuando no hay
+    // agente. La presencia de id y meta confirma que sí es una conversación.
+    if (conversacion.id && conversacion.meta && typeof conversacion.meta === 'object') {
+      return 'unassigned';
+    }
+
     return 'unknown';
   }
 
