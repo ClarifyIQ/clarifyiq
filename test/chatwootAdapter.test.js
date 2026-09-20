@@ -25,6 +25,9 @@ test('distingue conversación asignada, sin asignar e incierta', () => {
   const adapter = crearChatwootAdapter({ env });
   assert.equal(adapter.estadoAsignacion({ meta: { assignee: { id: 1 } } }), 'assigned');
   assert.equal(adapter.estadoAsignacion({ meta: { assignee: null } }), 'unassigned');
+  assert.equal(adapter.estadoAsignacion({ id: 5, meta: { sender: { id: 2 } } }), 'unassigned');
+  assert.equal(adapter.estadoAsignacion({ payload: { id: 5, meta: { assignee: null } } }), 'unassigned');
+  assert.equal(adapter.estadoAsignacion({ data: { id: 5, assignee: { id: 1 } } }), 'assigned');
   assert.equal(adapter.estadoAsignacion({}), 'unknown');
 });
 
