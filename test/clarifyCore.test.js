@@ -73,3 +73,33 @@ test('acepta una frase con un monto económico concreto', () => {
   assert.equal(estado.referenciaEconomica, true);
   assert.equal(estado.etapa, 'descripcionLibre');
 });
+
+test('detecta una cortesía después de llegar a orientable', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Muchas gracias'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.etapa, 'orientable');
+  assert.equal(estado.ultimaAccionEstado, 'CORTESIA');
+});
+
+test('detecta un saludo después de llegar a orientable', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Cinco dormitorios',
+    'Buenos días'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.etapa, 'orientable');
+  assert.equal(estado.ultimaAccionEstado, 'SALUDO');
+});
