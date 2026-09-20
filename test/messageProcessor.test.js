@@ -98,6 +98,24 @@ test('con operador asignado registra el mensaje y suprime la respuesta automáti
   assert.equal(deps.enviados.length, 0);
 });
 
+test('agrega resumen al iniciar una búsqueda orientable aunque Chatwoot reutilice la conversación', async () => {
+  const estado = {
+    ...estadoOrientable(),
+    orientable: false,
+    etapa: 'descripcionLibre',
+    ultimaAccionEstado: 'PEDIR_DESCRIPCION_LIBRE'
+  };
+  const deps = dependencias({
+    estado,
+    registro: { conversationId: 50, newConversation: false, assignmentStatus: 'assigned' }
+  });
+
+  await deps.procesador.procesar({ telefono: '5491', texto: 'Quiero pileta, patio y terraza' });
+
+  assert.equal(deps.notas.length, 1);
+  assert.match(deps.notas[0][1], /Resumen automático de CLARIFYIQ/);
+});
+
 test('si la asignación es desconocida evita una respuesta duplicada', async () => {
   const deps = dependencias({
     registro: { conversationId: 50, newConversation: false, assignmentStatus: 'unknown' }
