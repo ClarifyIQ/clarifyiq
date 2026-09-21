@@ -123,6 +123,7 @@ function crearEstadoInicial() {
     nombreComprador: null,
     nombreConfirmado: false,
     esperandoNombre: false,
+    debePreguntarNombre: false,
     intencion: null,
     referenciaEconomica: null,
     intentosReferenciaEconomica: 0,
@@ -137,6 +138,10 @@ function crearEstadoInicial() {
 function asegurarEstado(estadoActual) {
   if (!estadoActual) return crearEstadoInicial();
 
+  const tieneControlDeNombre =
+    Object.prototype.hasOwnProperty.call(estadoActual, "nombreConfirmado") ||
+    Object.prototype.hasOwnProperty.call(estadoActual, "esperandoNombre");
+
   const etapaAnterior = estadoActual.etapa === "intencion"
     ? "continuidad"
     : estadoActual.etapa ?? "apertura";
@@ -150,6 +155,10 @@ function asegurarEstado(estadoActual) {
     nombreComprador: estadoActual.nombreComprador ?? null,
     nombreConfirmado: Boolean(estadoActual.nombreConfirmado),
     esperandoNombre: Boolean(estadoActual.esperandoNombre),
+    debePreguntarNombre: Boolean(
+      estadoActual.debePreguntarNombre ||
+      (estadoActual.orientable && !tieneControlDeNombre)
+    ),
     intencion: estadoActual.intencion ?? null,
     referenciaEconomica:
       estadoActual.referenciaEconomica ??
@@ -473,6 +482,14 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.orientable) {
+    if (estado.debePreguntarNombre && !estado.nombreConfirmado) {
+      estado.debePreguntarNombre = false;
+      estado.esperandoNombre = true;
+      estado = guardarHistorial(estado, texto, "PREGUNTAR_NOMBRE");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     if (estado.esperandoNombre && !estado.nombreConfirmado) {
       const nombre = extraerNombre(texto);
 
