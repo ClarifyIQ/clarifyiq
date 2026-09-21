@@ -6,6 +6,9 @@ const { crearProcesadorMensajes, crearNotaInicial } = require('../messageProcess
 function estadoOrientable() {
   return {
     orientable: true,
+    nombreComprador: 'Marco',
+    nombreConfirmado: true,
+    esperandoNombre: false,
     intencion: true,
     referenciaEconomica: true,
     intentosReferenciaEconomica: 0,
