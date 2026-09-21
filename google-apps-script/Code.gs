@@ -1,5 +1,7 @@
 const SPREADSHEET_ID = '1ExOyllQswP9vFq_43CT9Ma5YnbPsD-eXgoc3rZlcNsY';
 const SHEET_NAME = 'Tablero';
+const FICHA_TEMPLATE_NAME = 'Ficha comprador';
+const FICHA_PREFIX = 'Ficha - ';
 const FIRST_DATA_ROW = 6;
 
 function respuestaJson(datos) {
@@ -26,7 +28,8 @@ function doPost(e) {
       return respuestaJson({ ok: false, error: 'Solicitud inválida' });
     }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEET_NAME);
     if (!sheet) return respuestaJson({ ok: false, error: 'No existe la pestaña Tablero' });
 
     const busqueda = cuerpo.busqueda;
@@ -52,13 +55,115 @@ function doPost(e) {
       );
     }
 
-    return respuestaJson({ ok: true, row, created: esNueva });
+    const ficha = sincronizarFicha(spreadsheet, busqueda);
+
+    return respuestaJson({
+      ok: true,
+      row,
+      created: esNueva,
+      ficha
+    });
   } catch (error) {
     console.error(error);
     return respuestaJson({ ok: false, error: String(error.message || error) });
   } finally {
     lock.releaseLock();
   }
+}
+
+function sincronizarFicha(spreadsheet, busqueda) {
+  // La ficha se crea recién después de que el comprador confirma su nombre.
+  // Esto evita pestañas provisionales basadas únicamente en el teléfono.
+  if (!busqueda.nombre || !busqueda.idBusqueda) {
+    return { synced: false, reason: 'nombre_pendiente' };
+  }
+
+  let ficha = buscarFicha(spreadsheet, busqueda.idBusqueda);
+  let creada = false;
+
+  if (!ficha) {
+    const plantilla = spreadsheet.getSheetByName(FICHA_TEMPLATE_NAME);
+    if (!plantilla) {
+      throw new Error('No existe la pestaña Ficha comprador');
+    }
+
+    ficha = plantilla.copyTo(spreadsheet);
+    ficha.setName(nombreFichaDisponible(spreadsheet, busqueda));
+    creada = true;
+  }
+
+  actualizarFicha(ficha, busqueda, creada);
+  return { synced: true, created: creada, sheetName: ficha.getName() };
+}
+
+function buscarFicha(spreadsheet, idBusqueda) {
+  const fichas = spreadsheet
+    .getSheets()
+    .filter(sheet => sheet.getName().startsWith(FICHA_PREFIX));
+
+  for (let indice = 0; indice < fichas.length; indice += 1) {
+    if (String(fichas[indice].getRange('B5').getDisplayValue()).trim() === idBusqueda) {
+      return fichas[indice];
+    }
+  }
+
+  return null;
+}
+
+function nombreFichaDisponible(spreadsheet, busqueda) {
+  const nombreLimpio = String(busqueda.nombre || 'Comprador')
+    .replace(/[\\/?:*\[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 70) || 'Comprador';
+  const base = `${FICHA_PREFIX}${nombreLimpio}`;
+
+  if (!spreadsheet.getSheetByName(base)) return base;
+
+  const ultimosDigitos = soloDigitos(busqueda.telefono).slice(-4) || 'nuevo';
+  const alternativa = `${base} ${ultimosDigitos}`.slice(0, 95);
+  if (!spreadsheet.getSheetByName(alternativa)) return alternativa;
+
+  let numero = 2;
+  while (spreadsheet.getSheetByName(`${alternativa} ${numero}`.slice(0, 100))) {
+    numero += 1;
+  }
+  return `${alternativa} ${numero}`.slice(0, 100);
+}
+
+function actualizarFicha(ficha, busqueda, creada) {
+  ficha.getRange('A2').setValue(`CasaLista - ficha de búsqueda viva — ${busqueda.nombre}`);
+
+  completarSiVacio(ficha, 'B5', busqueda.idBusqueda);
+  completarSiVacio(ficha, 'E5', busqueda.estado || 'Orientable');
+  completarSiVacio(ficha, 'H5', busqueda.prioridad);
+  completarSiVacio(ficha, 'B6', busqueda.nombre);
+  completarSiVacio(ficha, 'F6', busqueda.telefono);
+  ficha.getRange('F7').setValue(fechaValida(busqueda.ultimaActualizacion));
+
+  completarSiVacio(ficha, 'B10', busqueda.tipoPropiedad);
+  completarSiVacio(ficha, 'B11', busqueda.zonaPrincipal);
+  completarSiVacio(ficha, 'B12', busqueda.presupuestoMaximoUsd);
+  completarSiVacio(ficha, 'E12', busqueda.dineroDisponibleUsd);
+  completarSiVacio(ficha, 'H12', busqueda.prioridad);
+  completarSiVacio(ficha, 'B15', busqueda.descripcionOriginal);
+  completarSiVacio(ficha, 'B44', busqueda.proximaAccion || 'Revisar búsqueda en Chatwoot');
+  completarSiVacio(ficha, 'E45', 'Automático');
+
+  ficha.getRange('B12:C12').setNumberFormat('"USD" #,##0.00');
+  ficha.getRange('E12:F12').setNumberFormat('"USD" #,##0.00');
+
+  if (creada) {
+    ficha.getRange('A37').setValue(fechaValida(busqueda.ultimaActualizacion));
+    ficha.getRange('B37').setValue('Búsqueda orientable registrada automáticamente');
+    ficha.getRange('G37').setValue('ClarifyIQ');
+  }
+}
+
+function completarSiVacio(sheet, rango, valor) {
+  if (valor === null || valor === undefined || valor === '') return;
+  const celda = sheet.getRange(rango);
+  if (!celda.getValue()) celda.setValue(valor);
 }
 
 function buscarFila(sheet, telefono) {

@@ -1,7 +1,7 @@
 # Sincronización ClarifyIQ -> Google Sheets
 
-Este directorio contiene el receptor que actualiza la pestaña `Tablero` de la
-planilla `CasaLista - Organización de compradores`.
+Este directorio contiene el receptor que actualiza la pestaña `Tablero` y las
+fichas individuales de la planilla `CasaLista - Organización de compradores`.
 
 ## Activación
 
@@ -23,6 +23,11 @@ funcionando normalmente.
 
 - Sincroniza solamente búsquedas orientables.
 - Usa el teléfono para actualizar siempre la misma fila.
+- Cuando el comprador confirma su nombre, copia la plantilla `Ficha comprador`
+  y crea su ficha individual.
+- Usa el número de búsqueda para actualizar siempre la misma ficha y evitar
+  duplicados.
+- La plantilla original nunca se modifica.
 - No reemplaza estado, prioridad ni próxima acción si un operador ya los editó.
 - Conserva como notas la referencia económica y el último detalle compartido.
 - Un error de Google Sheets no detiene WhatsApp ni Chatwoot.
