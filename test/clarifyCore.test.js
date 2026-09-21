@@ -113,6 +113,21 @@ test('vuelve a pedir el nombre si la respuesta no parece un nombre', () => {
   assert.equal(estado.ultimaAccionEstado, 'NOMBRE_NO_VALIDO');
 });
 
+test('pregunta el nombre a una búsqueda orientable creada antes de esta mejora', () => {
+  const estadoAnterior = {
+    orientable: true,
+    etapa: 'orientable',
+    ultimaAccionEstado: 'ACOMPANAMIENTO',
+    historial: [{ categoria: 'ACOMPANAMIENTO', mensajeOriginal: 'Quiero patio' }]
+  };
+
+  const estado = actualizarEstado('Hola', estadoAnterior);
+
+  assert.equal(estado.ultimaAccionEstado, 'PREGUNTAR_NOMBRE');
+  assert.equal(estado.esperandoNombre, true);
+  assert.equal(estado.debePreguntarNombre, false);
+});
+
 test('detecta una cortesía después de llegar a orientable', () => {
   const estado = avanzar([
     'Hola',
