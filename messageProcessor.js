@@ -76,8 +76,15 @@ function crearProcesadorMensajes({
     // La planilla es un apoyo operativo. Si Google está lento o no disponible,
     // WhatsApp y Chatwoot deben continuar funcionando sin demoras ni bloqueos.
     if (estado.orientable && sheetsSync?.sincronizarBusqueda) {
+      const nombreConfirmado = estado.nombreConfirmado
+        ? estado.nombreComprador
+        : '';
       Promise.resolve()
-        .then(() => sheetsSync.sincronizarBusqueda({ telefono, nombre, estado }))
+        .then(() => sheetsSync.sincronizarBusqueda({
+          telefono,
+          nombre: nombreConfirmado,
+          estado
+        }))
         .catch(error => {
           console.error(
             'Error sincronizando búsqueda con Google Sheets:',
