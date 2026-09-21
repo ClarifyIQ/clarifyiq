@@ -74,6 +74,45 @@ test('acepta una frase con un monto económico concreto', () => {
   assert.equal(estado.etapa, 'descripcionLibre');
 });
 
+test('pregunta el nombre una sola vez al llegar a orientable', () => {
+  let estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Quiero patio y tres dormitorios'
+  ]);
+
+  assert.equal(estado.orientable, true);
+  assert.equal(estado.esperandoNombre, true);
+  assert.equal(estado.ultimaAccionEstado, 'PREGUNTAR_NOMBRE');
+
+  estado = actualizarEstado('Me llamo Marco Antonio', estado);
+  assert.equal(estado.nombreComprador, 'Marco Antonio');
+  assert.equal(estado.nombreConfirmado, true);
+  assert.equal(estado.esperandoNombre, false);
+  assert.equal(estado.ultimaAccionEstado, 'NOMBRE_CONFIRMADO');
+
+  estado = actualizarEstado('También necesito cochera', estado);
+  assert.equal(estado.nombreComprador, 'Marco Antonio');
+  assert.equal(estado.ultimaAccionEstado, 'ACOMPANAMIENTO');
+});
+
+test('vuelve a pedir el nombre si la respuesta no parece un nombre', () => {
+  const estado = avanzar([
+    'Hola',
+    'Casa',
+    'Si',
+    'USD 50000',
+    'Quiero patio',
+    '12345'
+  ]);
+
+  assert.equal(estado.nombreConfirmado, false);
+  assert.equal(estado.esperandoNombre, true);
+  assert.equal(estado.ultimaAccionEstado, 'NOMBRE_NO_VALIDO');
+});
+
 test('detecta una cortesía después de llegar a orientable', () => {
   const estado = avanzar([
     'Hola',
@@ -81,6 +120,7 @@ test('detecta una cortesía después de llegar a orientable', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Muchas gracias'
   ]);
 
@@ -97,6 +137,7 @@ test('detecta cortesías que no contienen la palabra gracias', () => {
       'Si',
       'USD 50000',
       'Cinco dormitorios',
+      'Marco',
       cortesia
     ]);
 
@@ -113,6 +154,7 @@ test('detecta agradecimiento y conformidad expresados en contexto', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Voy a recomendarlos, estoy conforme, gracias'
   ]);
 
@@ -128,6 +170,7 @@ test('detecta un elogio contextual como cortesía', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Se pasan por la buena onda, altamente recomendables, muy amable'
   ]);
 
@@ -142,6 +185,7 @@ test('ignora emojis al detectar una cortesía', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Perfecto 👌'
   ]);
 
@@ -156,6 +200,7 @@ test('no descarta un dato de búsqueda incluido junto con un agradecimiento', ()
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Gracias, pero también quiero árboles'
   ]);
 
@@ -171,6 +216,7 @@ test('detecta un saludo después de llegar a orientable', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Buenos días'
   ]);
 
@@ -187,6 +233,7 @@ test('marca como prioritarias las señales de ansiedad y demora', () => {
       'Si',
       'USD 50000',
       'Cinco dormitorios',
+      'Marco',
       mensaje
     ]);
 
@@ -203,6 +250,7 @@ test('marca como prioritaria una búsqueda expresada con apuro', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'Estoy apurado en conseguir una propiedad'
   ]);
 
@@ -217,6 +265,7 @@ test('no marca prioridad cuando el cliente aclara que no tiene apuro', () => {
     'Si',
     'USD 50000',
     'Cinco dormitorios',
+    'Marco',
     'No tengo apuro'
   ]);
 
