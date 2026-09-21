@@ -11,9 +11,11 @@ Module._load = function cargarConDependencias(request, parent, isMain) {
   if (parent?.filename === processorPath && request === './clarifyCore') {
     return {
       crearEstadoInicial: () => ({ orientable: false, historial: [] }),
-      actualizarEstado: () => ({
+      actualizarEstado: texto => ({
         orientable: true,
         etapa: 'orientable',
+        nombreComprador: texto === 'sin confirmar' ? null : 'Marco',
+        nombreConfirmado: texto !== 'sin confirmar',
         seguimientoPrioritario: false,
         historial: []
       }),
@@ -64,6 +66,28 @@ test('programa la sincronización sin demorar la respuesta de WhatsApp', async (
   assert.equal(sincronizadas.length, 1);
   assert.equal(sincronizadas[0].nombre, 'Marco');
   resolverSync();
+});
+
+test('no usa el nombre de perfil de WhatsApp antes de confirmarlo', async () => {
+  const sincronizadas = [];
+  const procesador = crearProcesadorMensajes({
+    chatwoot: { estaConfigurado: () => false },
+    obtener: () => ({ orientable: false, historial: [] }),
+    guardar: () => {},
+    enviarMeta: async () => {},
+    sheetsSync: {
+      sincronizarBusqueda: async datos => sincronizadas.push(datos)
+    }
+  });
+
+  await procesador.procesar({
+    telefono: '5491',
+    texto: 'sin confirmar',
+    nombre: 'Nombre del perfil'
+  });
+  await esperarSegundoPlano();
+
+  assert.equal(sincronizadas[0].nombre, '');
 });
 
 test('una falla de Sheets no bloquea la respuesta automática', async () => {
