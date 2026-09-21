@@ -74,6 +74,7 @@ function crearPayloadBusqueda({ telefono, nombre, estado, ahora = new Date() }) 
   const telefonoNormalizado = normalizarTelefono(telefono);
   const referenciaEconomicaOriginal = ultimoMensaje(estado, ['PEDIR_DESCRIPCION_LIBRE']);
   const descripcionOriginal = ultimoMensaje(estado, [
+    'PREGUNTAR_NOMBRE',
     'ACOMPANAMIENTO',
     'SEGUIMIENTO_PRIORITARIO'
   ]);

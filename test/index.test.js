@@ -42,7 +42,7 @@ test('el webhook de Meta delega mensajes de texto al procesador integrado', asyn
     assert.equal(respuesta.status, 200);
   });
 
-  assert.deepEqual(recibidos, [{ telefono: '5491', texto: 'Hola' }]);
+  assert.deepEqual(recibidos, [{ telefono: '5491', texto: 'Hola', nombre: '' }]);
 });
 
 test('el webhook de Chatwoot conserva el cuerpo original y reenvía la respuesta humana', async () => {

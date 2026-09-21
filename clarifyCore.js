@@ -61,6 +61,14 @@ const RESPUESTAS = {
     "Perfecto.\n\nA partir de ahora vamos a construir tu búsqueda teniendo en cuenta todo lo que para vos sea importante.\n\nPodés seguir escribiendo por este medio y agregar los detalles que consideres importantes.\n\nCada dato que compartas aporta valor y nos ayuda a comprender mejor qué estás buscando.\n\nPodés contarnos, por ejemplo:\n\n- la zona donde te gustaría vivir;\n- si necesitás estar cerca del trabajo, familia, colegios u otros lugares importantes;\n- características que para vos sean importantes de la propiedad;\n- prioridades personales o familiares;\n- cualquier información que pueda ayudarnos a identificar opciones más compatibles con tu búsqueda.\n\nToda la información que compartas queda registrada y ayuda a mantener tu búsqueda actualizada y activa. Cada nuevo dato nos permite comprender mejor tus necesidades y acompañarte durante el proceso.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
   ],
 
+  PREGUNTAR_NOMBRE: [
+    "Perfecto, tu búsqueda ya quedó clara y la vamos a registrar.\n\nAntes de continuar, ¿cómo te llamás?"
+  ],
+
+  NOMBRE_NO_VALIDO: [
+    "No pude identificar tu nombre.\n\nRespondeme solamente con el nombre que querés que usemos para acompañar tu búsqueda."
+  ],
+
   ACOMPANAMIENTO: [
     "Perfecto, lo dejamos registrado.\nDurante una búsqueda pueden aparecer nuevos detalles, cambios o prioridades.\nPodés compartirlos por este medio, porque toda esa información nos ayuda a identificar opciones más compatibles con lo que estás buscando.\nUn asesor revisará tu caso y se comunicará con vos para seguir acompañándote.",
     "Entendido, quedó incorporado a tu búsqueda.\nPodés seguir sumando cualquier información que consideres importante: cambios, preferencias, dudas o nuevos datos.\nLa idea es acompañarte durante el proceso y tener en cuenta qué es importante para vos.\nUn asesor se comunicará con vos para continuar personalmente la búsqueda.",
@@ -112,6 +120,9 @@ function elegir(categoria, estado) {
 function crearEstadoInicial() {
   return {
     orientable: false,
+    nombreComprador: null,
+    nombreConfirmado: false,
+    esperandoNombre: false,
     intencion: null,
     referenciaEconomica: null,
     intentosReferenciaEconomica: 0,
@@ -136,6 +147,9 @@ function asegurarEstado(estadoActual) {
 
   return {
     orientable: Boolean(estadoActual.orientable),
+    nombreComprador: estadoActual.nombreComprador ?? null,
+    nombreConfirmado: Boolean(estadoActual.nombreConfirmado),
+    esperandoNombre: Boolean(estadoActual.esperandoNombre),
     intencion: estadoActual.intencion ?? null,
     referenciaEconomica:
       estadoActual.referenciaEconomica ??
@@ -160,6 +174,32 @@ function normalizar(texto) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function extraerNombre(textoOriginal) {
+  let nombre = String(textoOriginal || "").trim();
+  nombre = nombre
+    .replace(/^(?:hola[,.]?\s*)?(?:me llamo|mi nombre es|soy)\s+/i, "")
+    .replace(/[.!?,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const nombreNormalizado = normalizar(nombre);
+  const respuestasGenericas = new Set([
+    "hola", "gracias", "muchas gracias", "si", "no", "bien",
+    "perfecto", "ok", "dale", "de acuerdo"
+  ]);
+
+  if (
+    nombre.length < 2 ||
+    nombre.length > 60 ||
+    respuestasGenericas.has(nombreNormalizado) ||
+    !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’-]+(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’-]+){0,4}$/.test(nombre)
+  ) {
+    return null;
+  }
+
+  return nombre;
 }
 
 function guardarHistorial(estado, mensajeOriginal, categoria) {
@@ -433,6 +473,23 @@ function actualizarEstado(mensaje, estadoActual) {
   }
 
   if (estado.orientable) {
+    if (estado.esperandoNombre && !estado.nombreConfirmado) {
+      const nombre = extraerNombre(texto);
+
+      if (!nombre) {
+        estado = guardarHistorial(estado, texto, "NOMBRE_NO_VALIDO");
+        estado.etapa = "orientable";
+        return estado;
+      }
+
+      estado.nombreComprador = nombre;
+      estado.nombreConfirmado = true;
+      estado.esperandoNombre = false;
+      estado = guardarHistorial(estado, texto, "NOMBRE_CONFIRMADO");
+      estado.etapa = "orientable";
+      return estado;
+    }
+
     if (esSaludo(texto)) {
       estado = guardarHistorial(estado, texto, "SALUDO");
       estado.etapa = "orientable";
@@ -586,15 +643,13 @@ function actualizarEstado(mensaje, estadoActual) {
     }
 
     estado.orientable = true;
+    estado.esperandoNombre = true;
 
     if (esSenalUrgencia(texto)) {
       estado.seguimientoPrioritario = true;
-      estado = guardarHistorial(estado, texto, "SEGUIMIENTO_PRIORITARIO");
-      estado.etapa = "orientable";
-      return estado;
     }
 
-    estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
+    estado = guardarHistorial(estado, texto, "PREGUNTAR_NOMBRE");
     estado.etapa = "orientable";
     return estado;
   }
@@ -656,6 +711,22 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "ORIENTABLE") {
     return { respuesta: elegir("ORIENTABLE", estado), accion: "ORIENTABLE", derivar: false };
+  }
+
+  if (categoria === "PREGUNTAR_NOMBRE") {
+    return { respuesta: elegir("PREGUNTAR_NOMBRE", estado), accion: "PREGUNTAR_NOMBRE", derivar: false };
+  }
+
+  if (categoria === "NOMBRE_NO_VALIDO") {
+    return { respuesta: elegir("NOMBRE_NO_VALIDO", estado), accion: "NOMBRE_NO_VALIDO", derivar: false };
+  }
+
+  if (categoria === "NOMBRE_CONFIRMADO") {
+    return {
+      respuesta: `Gracias, ${estado.nombreComprador}. Tu búsqueda quedó registrada.\n\nPodés seguir agregando cualquier detalle o cambio por este medio.`,
+      accion: "NOMBRE_CONFIRMADO",
+      derivar: false
+    };
   }
 
   if (categoria === "ACOMPANAMIENTO") {
