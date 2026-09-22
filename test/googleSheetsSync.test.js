@@ -48,6 +48,33 @@ test('crea un payload estable para actualizar la misma búsqueda', () => {
   assert.equal(payload.descripcionOriginal, 'Quiero patio y pileta');
 });
 
+test('prioriza la organización estructurada sin confundir dinero disponible', () => {
+  const organizacion = {
+    tipoPropiedad: { valor: 'Casa' },
+    zonas: { principal: 'Centro' },
+    presupuestoMaximo: { monto: 75000000, moneda: 'ARS' },
+    dineroDisponible: { monto: 60000000, moneda: 'ARS' },
+    urgencia: { nivel: 'alta' },
+    fechaLimite: { texto: 'Antes de fin de año' }
+  };
+
+  const payload = crearPayloadBusqueda({
+    telefono: '5491',
+    nombre: 'Rosa',
+    estado: estadoOrientable(),
+    organizacion,
+    ahora: new Date('2026-09-21T12:00:00.000Z')
+  });
+
+  assert.equal(payload.tipoPropiedad, 'Casa');
+  assert.equal(payload.zonaPrincipal, 'Centro');
+  assert.equal(payload.presupuestoMaximoUsd, null);
+  assert.equal(payload.dineroDisponibleUsd, null);
+  assert.equal(payload.fechaLimite, 'Antes de fin de año');
+  assert.equal(payload.organizacion.presupuestoMaximo.monto, 75000000);
+  assert.equal(payload.organizacion.dineroDisponible.monto, 60000000);
+});
+
 test('queda desactivado de forma segura si faltan variables', async () => {
   const sync = crearGoogleSheetsSync({ env: {}, http: { post: async () => assert.fail() } });
   const resultado = await sync.sincronizarBusqueda({

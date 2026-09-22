@@ -42,6 +42,7 @@ function doPost(e) {
       : filaActualizada(existente, busqueda);
 
     sheet.getRange(row, 1, 1, 13).setValues([valores]);
+    actualizarTableroOrganizado(sheet, row, busqueda);
 
     if (busqueda.referenciaEconomicaOriginal) {
       sheet.getRange(row, 6).setNote(
@@ -136,28 +137,332 @@ function actualizarFicha(ficha, busqueda, creada) {
 
   completarSiVacio(ficha, 'B5', busqueda.idBusqueda);
   completarSiVacio(ficha, 'E5', busqueda.estado || 'Orientable');
-  completarSiVacio(ficha, 'H5', busqueda.prioridad);
+  if (!busqueda.organizacion) completarSiVacio(ficha, 'H5', busqueda.prioridad);
   completarSiVacio(ficha, 'B6', busqueda.nombre);
   completarSiVacio(ficha, 'F6', busqueda.telefono);
   ficha.getRange('F7').setValue(fechaValida(busqueda.ultimaActualizacion));
 
-  completarSiVacio(ficha, 'B10', busqueda.tipoPropiedad);
-  completarSiVacio(ficha, 'B11', busqueda.zonaPrincipal);
-  completarSiVacio(ficha, 'B12', busqueda.presupuestoMaximoUsd);
-  completarSiVacio(ficha, 'E12', busqueda.dineroDisponibleUsd);
-  completarSiVacio(ficha, 'H12', busqueda.prioridad);
-  completarSiVacio(ficha, 'B15', busqueda.descripcionOriginal);
+  if (!busqueda.organizacion) {
+    completarSiVacio(ficha, 'B10', busqueda.tipoPropiedad);
+    completarSiVacio(ficha, 'B11', busqueda.zonaPrincipal);
+    completarSiVacio(ficha, 'B12', busqueda.presupuestoMaximoUsd);
+    completarSiVacio(ficha, 'E12', busqueda.dineroDisponibleUsd);
+    completarSiVacio(ficha, 'H12', busqueda.prioridad);
+    completarSiVacio(ficha, 'B15', busqueda.descripcionOriginal);
+  }
   completarSiVacio(ficha, 'B44', busqueda.proximaAccion || 'Revisar búsqueda en Chatwoot');
   completarSiVacio(ficha, 'E45', 'Automático');
 
-  ficha.getRange('B12:C12').setNumberFormat('"USD" #,##0.00');
-  ficha.getRange('E12:F12').setNumberFormat('"USD" #,##0.00');
+  if (busqueda.organizacion) {
+    actualizarFichaOrganizada(ficha, busqueda.organizacion);
+  } else {
+    ficha.getRange('B12:C12').setNumberFormat('"USD" #,##0.00');
+    ficha.getRange('E12:F12').setNumberFormat('"USD" #,##0.00');
+  }
 
   if (creada) {
     ficha.getRange('A37').setValue(fechaValida(busqueda.ultimaActualizacion));
     ficha.getRange('B37').setValue('Búsqueda orientable registrada automáticamente');
     ficha.getRange('G37').setValue('ClarifyIQ');
   }
+}
+
+function actualizarTableroOrganizado(sheet, row, busqueda) {
+  const organizacion = busqueda.organizacion;
+  if (!organizacion) {
+    if (busqueda.fechaLimite && !sheet.getRange(row, 9).getValue()) {
+      sheet.getRange(row, 9).setValue(busqueda.fechaLimite);
+    }
+    return;
+  }
+
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 4),
+    organizacion.tipoPropiedad?.valor,
+    'tipoPropiedad',
+    organizacion.tipoPropiedad?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 5),
+    organizacion.zonas?.principal,
+    'zonaPrincipal',
+    organizacion.zonas?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 6),
+    formatearMonto(organizacion.presupuestoMaximo),
+    'presupuestoMaximo',
+    organizacion.presupuestoMaximo?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 7),
+    formatearMonto(organizacion.dineroDisponible),
+    'dineroDisponible',
+    organizacion.dineroDisponible?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 8),
+    prioridadDesdeOrganizacion(organizacion),
+    'prioridad',
+    organizacion.urgencia?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    sheet.getRange(row, 9),
+    organizacion.fechaLimite?.texto,
+    'fechaLimite',
+    organizacion.fechaLimite?.texto
+  );
+}
+
+function actualizarFichaOrganizada(ficha, organizacion) {
+  actualizarCeldaAutomatica(
+    ficha.getRange('H5'),
+    prioridadDesdeOrganizacion(organizacion),
+    'prioridad',
+    organizacion.urgencia?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B10'),
+    organizacion.tipoPropiedad?.valor,
+    'tipoPropiedad',
+    organizacion.tipoPropiedad?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B11'),
+    organizacion.zonas?.principal,
+    'zonaPrincipal',
+    organizacion.zonas?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('F11'),
+    (organizacion.zonas?.alternativas || []).join(', '),
+    'zonasAlternativas',
+    organizacion.zonas?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B12'),
+    formatearMonto(organizacion.presupuestoMaximo),
+    'presupuestoMaximo',
+    organizacion.presupuestoMaximo?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('E12'),
+    formatearMonto(organizacion.dineroDisponible),
+    'dineroDisponible',
+    organizacion.dineroDisponible?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B13'),
+    describirFinanciacion(organizacion.financiacion),
+    'financiacion',
+    organizacion.financiacion?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B14'),
+    organizacion.dormitorios?.cantidad,
+    'dormitorios',
+    organizacion.dormitorios?.textoOriginal
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('B15'),
+    describirCaracteristicas(organizacion.caracteristicas),
+    'caracteristicas',
+    evidenciaCaracteristicas(organizacion.caracteristicas)
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('F10'),
+    organizacion.fechaLimite?.texto,
+    'fechaLimite',
+    organizacion.fechaLimite?.texto
+  );
+  actualizarCeldaAutomatica(
+    ficha.getRange('H12'),
+    etiquetaUrgencia(organizacion.urgencia?.nivel),
+    'urgencia',
+    organizacion.urgencia?.textoOriginal
+  );
+
+  actualizarListaProtegida(ficha, 'B19', organizacion.situacionFamiliar, 'situacionFamiliar');
+  actualizarListaProtegida(ficha, 'B20', organizacion.necesidadesEspeciales, 'necesidadesEspeciales');
+  actualizarListaProtegida(ficha, 'B21', organizacion.cosasAEvitar, 'cosasAEvitar');
+  actualizarRequisitos(ficha, organizacion.caracteristicas || []);
+  registrarCambios(ficha, organizacion.cambiosDetectados || []);
+}
+
+function actualizarListaProtegida(sheet, rango, valores, campo) {
+  const texto = Array.isArray(valores) ? valores.filter(Boolean).join('; ') : '';
+  actualizarCeldaAutomatica(sheet.getRange(rango), texto, campo, texto);
+}
+
+function actualizarRequisitos(ficha, caracteristicas) {
+  const inicio = 26;
+  const fin = 34;
+  const nombres = ficha.getRange(inicio, 1, fin - inicio + 1, 1).getDisplayValues();
+
+  caracteristicas.forEach(caracteristica => {
+    const nombre = String(caracteristica?.nombre || '').trim();
+    if (!nombre) return;
+
+    let fila = null;
+    for (let indice = 0; indice < nombres.length; indice += 1) {
+      if (normalizarComparacion(nombres[indice][0]) === normalizarComparacion(nombre)) {
+        fila = inicio + indice;
+        break;
+      }
+      if (fila === null && !nombres[indice][0]) fila = inicio + indice;
+    }
+    if (!fila) return;
+
+    actualizarCeldaAutomatica(
+      ficha.getRange(fila, 1),
+      nombre,
+      `requisito:${nombre}`,
+      caracteristica.textoOriginal
+    );
+
+    const clasificacion = etiquetaClasificacion(caracteristica.clasificacion);
+    if (clasificacion) {
+      actualizarCeldaAutomatica(
+        ficha.getRange(fila, 5),
+        clasificacion,
+        `clasificacion:${nombre}`,
+        caracteristica.textoOriginal
+      );
+    }
+    actualizarCeldaAutomatica(
+      ficha.getRange(fila, 6),
+      caracteristica.textoOriginal,
+      `evidencia:${nombre}`,
+      caracteristica.textoOriginal
+    );
+  });
+}
+
+function registrarCambios(ficha, cambios) {
+  if (!Array.isArray(cambios) || !cambios.length) return;
+  const inicio = 37;
+  const fin = 42;
+
+  cambios.forEach(cambio => {
+    const descripcion = describirCambio(cambio);
+    if (!descripcion) return;
+
+    const existentes = ficha.getRange(inicio, 2, fin - inicio + 1, 1).getDisplayValues().flat();
+    if (existentes.includes(descripcion)) return;
+
+    let fila = existentes.findIndex(valor => !valor);
+    if (fila >= 0) {
+      fila += inicio;
+    } else {
+      const valores = ficha.getRange(inicio + 1, 1, fin - inicio, 7).getValues();
+      ficha.getRange(inicio, 1, fin - inicio, 7).setValues(valores);
+      fila = fin;
+    }
+
+    ficha.getRange(fila, 1).setValue(new Date());
+    ficha.getRange(fila, 2).setValue(descripcion);
+    ficha.getRange(fila, 7).setValue('Organizador CasaLista');
+  });
+}
+
+function describirCambio(cambio) {
+  if (!cambio?.campo || !cambio?.tipoCambio) return '';
+  const anterior = valorLegible(cambio.valorAnterior);
+  const nuevo = valorLegible(cambio.valorNuevo);
+  return `${cambio.campo}: ${cambio.tipoCambio} — ${anterior || 'sin dato'} → ${nuevo || 'sin dato'}`;
+}
+
+function actualizarCeldaAutomatica(celda, valor, campo, evidencia) {
+  if (valor === null || valor === undefined || valor === '') return false;
+
+  const actual = celda.getValue();
+  const marca = leerMarcaAutomatica(celda.getNote());
+  const puedeActualizar = !actual ||
+    (!marca && String(actual) === String(valor)) ||
+    (marca && String(actual) === String(marca.valor));
+
+  if (!puedeActualizar) return false;
+
+  celda.setValue(valor);
+  celda.setNote(notaAutomatica(campo, valor, evidencia));
+  return true;
+}
+
+function notaAutomatica(campo, valor, evidencia) {
+  const metadata = JSON.stringify({ campo, valor: String(valor) });
+  const detalle = evidencia ? `\nEvidencia del comprador:\n${evidencia}` : '';
+  return `CLARIFYIQ_AUTO\n${metadata}${detalle}`;
+}
+
+function leerMarcaAutomatica(nota) {
+  const lineas = String(nota || '').split('\n');
+  if (lineas[0] !== 'CLARIFYIQ_AUTO' || !lineas[1]) return null;
+  try {
+    return JSON.parse(lineas[1]);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function formatearMonto(dato) {
+  if (!dato || dato.monto === null || dato.monto === undefined) return '';
+  const moneda = dato.moneda || 'UNKNOWN';
+  const numero = Number(dato.monto);
+  if (!Number.isFinite(numero)) return '';
+  const formateado = numero.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+  return `${moneda} ${formateado}`;
+}
+
+function describirFinanciacion(dato) {
+  if (!dato || dato.estado === 'desconocido') return '';
+  if (dato.estado === 'no') return 'No requiere financiación';
+  const partes = ['Sí'];
+  if (dato.tipo) partes.push(dato.tipo);
+  const monto = formatearMonto(dato);
+  if (monto) partes.push(monto);
+  return partes.join(' — ');
+}
+
+function describirCaracteristicas(caracteristicas) {
+  if (!Array.isArray(caracteristicas)) return '';
+  return caracteristicas.map(item => item?.nombre).filter(Boolean).join(', ');
+}
+
+function evidenciaCaracteristicas(caracteristicas) {
+  if (!Array.isArray(caracteristicas)) return '';
+  return [...new Set(caracteristicas.map(item => item?.textoOriginal).filter(Boolean))].join('\n');
+}
+
+function prioridadDesdeOrganizacion(organizacion) {
+  return etiquetaUrgencia(organizacion?.urgencia?.nivel);
+}
+
+function etiquetaUrgencia(nivel) {
+  const etiquetas = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  return etiquetas[nivel] || '';
+}
+
+function etiquetaClasificacion(valor) {
+  const etiquetas = {
+    indispensable: 'Indispensable',
+    preferido: 'Preferido',
+    flexible: 'Flexible'
+  };
+  return etiquetas[valor] || '';
+}
+
+function valorLegible(valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  if (typeof valor === 'object') return JSON.stringify(valor);
+  return String(valor);
+}
+
+function normalizarComparacion(valor) {
+  return String(valor || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function completarSiVacio(sheet, rango, valor) {
@@ -196,16 +501,17 @@ function buscarFilaLibre(sheet) {
 }
 
 function filaNueva(busqueda) {
+  const organizada = Boolean(busqueda.organizacion);
   return [
     busqueda.idBusqueda || '',
     busqueda.nombre || '',
     busqueda.telefono || '',
-    busqueda.tipoPropiedad || '',
-    busqueda.zonaPrincipal || '',
-    busqueda.presupuestoMaximoUsd || '',
-    busqueda.dineroDisponibleUsd || '',
-    busqueda.prioridad || '',
-    '',
+    organizada ? '' : (busqueda.tipoPropiedad || ''),
+    organizada ? '' : (busqueda.zonaPrincipal || ''),
+    organizada ? '' : (busqueda.presupuestoMaximoUsd || ''),
+    organizada ? '' : (busqueda.dineroDisponibleUsd || ''),
+    organizada ? '' : (busqueda.prioridad || ''),
+    organizada ? '' : (busqueda.fechaLimite || ''),
     busqueda.estado || 'Orientable',
     '',
     fechaValida(busqueda.ultimaActualizacion),
@@ -218,15 +524,18 @@ function filaActualizada(existente, busqueda) {
   if (!actualizada[0]) actualizada[0] = busqueda.idBusqueda || '';
   if (!actualizada[1] && busqueda.nombre) actualizada[1] = busqueda.nombre;
   actualizada[2] = busqueda.telefono || actualizada[2];
-  if (!actualizada[3] && busqueda.tipoPropiedad) actualizada[3] = busqueda.tipoPropiedad;
-  if (!actualizada[4] && busqueda.zonaPrincipal) actualizada[4] = busqueda.zonaPrincipal;
-  if (!actualizada[5] && busqueda.presupuestoMaximoUsd) {
-    actualizada[5] = busqueda.presupuestoMaximoUsd;
+  if (!busqueda.organizacion) {
+    if (!actualizada[3] && busqueda.tipoPropiedad) actualizada[3] = busqueda.tipoPropiedad;
+    if (!actualizada[4] && busqueda.zonaPrincipal) actualizada[4] = busqueda.zonaPrincipal;
+    if (!actualizada[5] && busqueda.presupuestoMaximoUsd) {
+      actualizada[5] = busqueda.presupuestoMaximoUsd;
+    }
+    if (!actualizada[6] && busqueda.dineroDisponibleUsd) {
+      actualizada[6] = busqueda.dineroDisponibleUsd;
+    }
+    if (!actualizada[7] && busqueda.prioridad) actualizada[7] = busqueda.prioridad;
+    if (!actualizada[8] && busqueda.fechaLimite) actualizada[8] = busqueda.fechaLimite;
   }
-  if (!actualizada[6] && busqueda.dineroDisponibleUsd) {
-    actualizada[6] = busqueda.dineroDisponibleUsd;
-  }
-  if (!actualizada[7] && busqueda.prioridad) actualizada[7] = busqueda.prioridad;
   if (!actualizada[9]) actualizada[9] = busqueda.estado || 'Orientable';
   actualizada[11] = fechaValida(busqueda.ultimaActualizacion);
   if (!actualizada[12]) {

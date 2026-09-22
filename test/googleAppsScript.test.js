@@ -27,6 +27,15 @@ class RangoFalso {
     this.sheet.formatos.set(this.a1, formato);
     return this;
   }
+
+  getNote() {
+    return this.sheet.notas.get(this.a1) || '';
+  }
+
+  setNote(nota) {
+    this.sheet.notas.set(this.a1, nota);
+    return this;
+  }
 }
 
 class HojaFalsa {
@@ -34,6 +43,7 @@ class HojaFalsa {
     this.nombre = nombre;
     this.valores = new Map(Object.entries(valores));
     this.formatos = new Map();
+    this.notas = new Map();
   }
 
   getName() {
@@ -144,4 +154,44 @@ test('actualiza la ficha existente sin duplicarla ni pisar datos manuales', () =
   assert.equal(spreadsheet.getSheets().length, 2);
   assert.equal(ficha.getRange('B10').getValue(), 'Casa corregida por operador');
   assert.equal(ficha.getRange('B6').getValue(), 'Dante');
+});
+
+test('actualiza un campo automático y conserva la evidencia', () => {
+  const codigo = cargarCodigo();
+  const ficha = new HojaFalsa('Ficha - Rosa');
+  const celda = ficha.getRange('B12');
+
+  assert.equal(
+    codigo.actualizarCeldaAutomatica(celda, 'ARS 75.000.000', 'presupuestoMaximo', 'Presupuesto 75 millones'),
+    true
+  );
+  assert.equal(celda.getValue(), 'ARS 75.000.000');
+  assert.match(celda.getNote(), /CLARIFYIQ_AUTO/);
+  assert.match(celda.getNote(), /Presupuesto 75 millones/);
+
+  assert.equal(
+    codigo.actualizarCeldaAutomatica(celda, 'ARS 70.000.000', 'presupuestoMaximo', 'Ahora 70 millones'),
+    true
+  );
+  assert.equal(celda.getValue(), 'ARS 70.000.000');
+});
+
+test('no pisa una corrección manual del operador', () => {
+  const codigo = cargarCodigo();
+  const ficha = new HojaFalsa('Ficha - Rosa');
+  const celda = ficha.getRange('B12');
+
+  codigo.actualizarCeldaAutomatica(
+    celda,
+    'ARS 75.000.000',
+    'presupuestoMaximo',
+    'Presupuesto 75 millones'
+  );
+  celda.setValue('Revisar con comprador');
+
+  assert.equal(
+    codigo.actualizarCeldaAutomatica(celda, 'ARS 70.000.000', 'presupuestoMaximo', 'Ahora 70 millones'),
+    false
+  );
+  assert.equal(celda.getValue(), 'Revisar con comprador');
 });
