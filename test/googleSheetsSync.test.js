@@ -144,6 +144,105 @@ test('tolera una demora simulada de Apps Script superior a ocho segundos', async
   assert.equal(resultado.row, 7);
 });
 
+test('registra metadatos seguros de una respuesta exitosa de Google Sheets', async () => {
+  const registros = [];
+  const sync = crearGoogleSheetsSync({
+    env: {
+      GOOGLE_SHEETS_WEBHOOK_URL: 'https://example.test/sync',
+      GOOGLE_SHEETS_SYNC_SECRET: 'secreto-no-registrar'
+    },
+    http: {
+      post: async () => ({
+        status: 200,
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+        data: { ok: true, row: 8, contenidoPrivado: 'no registrar' }
+      })
+    },
+    logger: { log: (...argumentos) => registros.push(argumentos) }
+  });
+
+  await sync.sincronizarBusqueda({
+    telefono: '5491111111111',
+    nombre: 'Nombre privado',
+    estado: estadoOrientable()
+  });
+
+  assert.deepEqual(registros, [[
+    'Google Sheets: respuesta recibida',
+    {
+      status: 200,
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'object',
+      ok: true
+    }
+  ]]);
+  const serializado = JSON.stringify(registros);
+  assert.equal(serializado.includes('5491111111111'), false);
+  assert.equal(serializado.includes('Nombre privado'), false);
+  assert.equal(serializado.includes('secreto-no-registrar'), false);
+  assert.equal(serializado.includes('no registrar'), false);
+});
+
+test('registra solamente el error devuelto por Google Sheets antes de rechazar', async () => {
+  const registros = [];
+  const sync = crearGoogleSheetsSync({
+    env: {
+      GOOGLE_SHEETS_WEBHOOK_URL: 'https://example.test/sync',
+      GOOGLE_SHEETS_SYNC_SECRET: 'secreto'
+    },
+    http: {
+      post: async () => ({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        data: { ok: false, error: 'Error seguro de Apps Script', detalle: 'dato sensible' }
+      })
+    },
+    logger: { log: (...argumentos) => registros.push(argumentos) }
+  });
+
+  await assert.rejects(
+    sync.sincronizarBusqueda({ telefono: '5491', estado: estadoOrientable() }),
+    /Error seguro de Apps Script/
+  );
+  assert.deepEqual(registros[0][1], {
+    status: 200,
+    contentType: 'application/json',
+    dataType: 'object',
+    error: 'Error seguro de Apps Script',
+    ok: false
+  });
+  assert.equal(JSON.stringify(registros).includes('dato sensible'), false);
+});
+
+test('identifica una respuesta textual sin registrar su contenido', async () => {
+  const registros = [];
+  const sync = crearGoogleSheetsSync({
+    env: {
+      GOOGLE_SHEETS_WEBHOOK_URL: 'https://example.test/sync',
+      GOOGLE_SHEETS_SYNC_SECRET: 'secreto'
+    },
+    http: {
+      post: async () => ({
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+        data: 'contenido completo prohibido'
+      })
+    },
+    logger: { log: (...argumentos) => registros.push(argumentos) }
+  });
+
+  await assert.rejects(
+    sync.sincronizarBusqueda({ telefono: '5491', estado: estadoOrientable() }),
+    /Google Sheets no confirmó la sincronización/
+  );
+  assert.deepEqual(registros[0][1], {
+    status: 200,
+    contentType: 'text/html; charset=utf-8',
+    dataType: 'string'
+  });
+  assert.equal(JSON.stringify(registros).includes('contenido completo prohibido'), false);
+});
+
 test('no sincroniza estados que todavía no son orientables', async () => {
   const sync = crearGoogleSheetsSync({
     env: {

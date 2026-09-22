@@ -108,7 +108,7 @@ function crearPayloadBusqueda({
   };
 }
 
-function crearGoogleSheetsSync({ env = process.env, http } = {}) {
+function crearGoogleSheetsSync({ env = process.env, http, logger = console } = {}) {
   const endpoint = String(env.GOOGLE_SHEETS_WEBHOOK_URL || '').trim();
   const secreto = String(env.GOOGLE_SHEETS_SYNC_SECRET || '').trim();
 
@@ -128,6 +128,24 @@ function crearGoogleSheetsSync({ env = process.env, http } = {}) {
       { secreto, accion: 'upsert', busqueda },
       { timeout: 30000, headers: { 'Content-Type': 'application/json' } }
     );
+
+    const datos = respuesta?.data;
+    const diagnostico = {
+      status: respuesta?.status,
+      contentType: respuesta?.headers?.['content-type'],
+      dataType: Array.isArray(datos) ? 'array' : datos === null ? 'null' : typeof datos
+    };
+
+    if (datos && typeof datos === 'object' &&
+        Object.prototype.hasOwnProperty.call(datos, 'error')) {
+      diagnostico.error = datos.error;
+    }
+    if (datos && typeof datos === 'object' &&
+        Object.prototype.hasOwnProperty.call(datos, 'ok')) {
+      diagnostico.ok = datos.ok;
+    }
+
+    logger.log('Google Sheets: respuesta recibida', diagnostico);
 
     if (respuesta?.data?.ok !== true) {
       throw new Error(respuesta?.data?.error || 'Google Sheets no confirmó la sincronización');
