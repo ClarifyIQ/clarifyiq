@@ -62,7 +62,8 @@ function crearProcesadorMensajes({
   guardarOrganizacionResultado = guardarOrganizacion,
   enviarMeta = enviarMensajeMeta,
   sheetsSync = crearGoogleSheetsSync(),
-  organizer = crearOrganizadorComprador()
+  organizer = crearOrganizadorComprador(),
+  logger = console
 } = {}) {
   async function procesar({ telefono, texto, nombre }) {
     let sesion = obtener(telefono);
@@ -98,6 +99,7 @@ function crearProcesadorMensajes({
 
           if (debeOrganizar(estado) && organizer?.organizar) {
             try {
+              logger.log('Organizador V1: ejecución iniciada');
               const resultado = await organizer.organizar({
                 telefono,
                 nombre: nombreConfirmado,
@@ -113,10 +115,13 @@ function crearProcesadorMensajes({
                     sourceUntil: resultado.sourceUntil
                   });
                   resultadoObsoleto = guardada === false;
+                  if (!resultadoObsoleto) {
+                    logger.log('Organizador V1: resultado guardado');
+                  }
                 }
               }
             } catch (error) {
-              console.error(
+              logger.error(
                 'Error organizando búsqueda con OpenAI:',
                 error.response?.data || error.message
               );
@@ -124,6 +129,7 @@ function crearProcesadorMensajes({
           }
 
           if (resultadoObsoleto) {
+            logger.log('Organizador V1: resultado descartado por obsolescencia');
             return { enabled: true, synced: false, reason: 'resultado_obsoleto' };
           }
 
@@ -132,15 +138,18 @@ function crearProcesadorMensajes({
             ? sesionMasReciente.nombreComprador
             : nombreConfirmado;
 
-          return sheetsSync.sincronizarBusqueda({
+          logger.log('Google Sheets: sincronización iniciada');
+          const resultadoSheets = await sheetsSync.sincronizarBusqueda({
             telefono,
             nombre: nombreParaSincronizar,
             estado: sesionMasReciente,
             organizacion
           });
+          logger.log('Google Sheets: sincronización completada');
+          return resultadoSheets;
         })
         .catch(error => {
-          console.error(
+          logger.error(
             'Error sincronizando búsqueda con Google Sheets:',
             error.response?.data || error.message
           );
