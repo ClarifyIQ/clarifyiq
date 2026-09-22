@@ -137,13 +137,17 @@ function crearProcesadorMensajes({
           const nombreParaSincronizar = sesionMasReciente.nombreConfirmado
             ? sesionMasReciente.nombreComprador
             : nombreConfirmado;
+          const organizacionParaSincronizar =
+            sesionMasReciente.organizacionComprador || organizacion || null;
 
-          logger.log('Google Sheets: sincronización iniciada');
+          logger.log(
+            `Google Sheets: sincronización iniciada — organizacionIncluida: ${Boolean(organizacionParaSincronizar)}`
+          );
           const resultadoSheets = await sheetsSync.sincronizarBusqueda({
             telefono,
             nombre: nombreParaSincronizar,
             estado: sesionMasReciente,
-            organizacion
+            organizacion: organizacionParaSincronizar
           });
           logger.log('Google Sheets: sincronización completada');
           return resultadoSheets;
