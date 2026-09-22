@@ -8,10 +8,12 @@ const {
 
 const {
   obtenerSesion,
-  guardarSesion
+  guardarSesion,
+  guardarOrganizacion
 } = require('./sessionStore');
 
 const { crearGoogleSheetsSync } = require('./googleSheetsSync');
+const { crearOrganizadorComprador, debeOrganizar } = require('./buyerOrganizer');
 
 function crearNotaInicial(estado) {
   const intencion = estado.intencion === true
@@ -57,17 +59,27 @@ function crearProcesadorMensajes({
   chatwoot,
   obtener = obtenerSesion,
   guardar = guardarSesion,
+  guardarOrganizacionResultado = guardarOrganizacion,
   enviarMeta = enviarMensajeMeta,
-  sheetsSync = crearGoogleSheetsSync()
+  sheetsSync = crearGoogleSheetsSync(),
+  organizer = crearOrganizadorComprador()
 } = {}) {
   async function procesar({ telefono, texto, nombre }) {
     let sesion = obtener(telefono);
     if (!sesion) sesion = crearEstadoInicial();
 
+    const organizacionAnterior = sesion.organizacionComprador || null;
+    const historialOrganizacionAnterior = Array.isArray(sesion.historialOrganizacion)
+      ? sesion.historialOrganizacion
+      : [];
     const yaEraOrientable = Boolean(sesion.orientable);
     const yaEraPrioritario = Boolean(sesion.seguimientoPrioritario);
 
     const estado = actualizarEstado(texto, sesion);
+    if (organizacionAnterior) estado.organizacionComprador = organizacionAnterior;
+    if (historialOrganizacionAnterior.length) {
+      estado.historialOrganizacion = historialOrganizacionAnterior;
+    }
     const accion = decidirSiguienteAccion(estado);
 
     // Guardar antes de cualquier llamada externa evita perder el avance del usuario.
@@ -80,11 +92,53 @@ function crearProcesadorMensajes({
         ? estado.nombreComprador
         : '';
       Promise.resolve()
-        .then(() => sheetsSync.sincronizarBusqueda({
-          telefono,
-          nombre: nombreConfirmado,
-          estado
-        }))
+        .then(async () => {
+          let organizacion = organizacionAnterior;
+          let resultadoObsoleto = false;
+
+          if (debeOrganizar(estado) && organizer?.organizar) {
+            try {
+              const resultado = await organizer.organizar({
+                telefono,
+                nombre: nombreConfirmado,
+                estado,
+                organizacionAnterior
+              });
+
+              if (resultado?.organized && resultado.organizacion) {
+                organizacion = resultado.organizacion;
+                if (guardarOrganizacionResultado) {
+                  const guardada = guardarOrganizacionResultado(telefono, {
+                    organizacion,
+                    sourceUntil: resultado.sourceUntil
+                  });
+                  resultadoObsoleto = guardada === false;
+                }
+              }
+            } catch (error) {
+              console.error(
+                'Error organizando búsqueda con OpenAI:',
+                error.response?.data || error.message
+              );
+            }
+          }
+
+          if (resultadoObsoleto) {
+            return { enabled: true, synced: false, reason: 'resultado_obsoleto' };
+          }
+
+          const sesionMasReciente = obtener(telefono) || estado;
+          const nombreParaSincronizar = sesionMasReciente.nombreConfirmado
+            ? sesionMasReciente.nombreComprador
+            : nombreConfirmado;
+
+          return sheetsSync.sincronizarBusqueda({
+            telefono,
+            nombre: nombreParaSincronizar,
+            estado: sesionMasReciente,
+            organizacion
+          });
+        })
         .catch(error => {
           console.error(
             'Error sincronizando búsqueda con Google Sheets:',

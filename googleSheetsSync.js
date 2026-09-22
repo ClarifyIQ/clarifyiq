@@ -70,7 +70,13 @@ function extraerMontoUsd(textoOriginal) {
   return null;
 }
 
-function crearPayloadBusqueda({ telefono, nombre, estado, ahora = new Date() }) {
+function crearPayloadBusqueda({
+  telefono,
+  nombre,
+  estado,
+  organizacion = null,
+  ahora = new Date()
+}) {
   const telefonoNormalizado = normalizarTelefono(telefono);
   const referenciaEconomicaOriginal = ultimoMensaje(estado, ['PEDIR_DESCRIPCION_LIBRE']);
   const descripcionOriginal = ultimoMensaje(estado, [
@@ -79,20 +85,26 @@ function crearPayloadBusqueda({ telefono, nombre, estado, ahora = new Date() }) 
     'SEGUIMIENTO_PRIORITARIO'
   ]);
 
+  const prioridadOrganizada = organizacion?.urgencia?.nivel === 'alta' ? 'Alta' : '';
+
   return {
     idBusqueda: `CL-${telefonoNormalizado.replace(/\D/g, '')}`,
     nombre: String(nombre || '').trim(),
     telefono: telefonoNormalizado,
-    tipoPropiedad: detectarTipoPropiedad(estado),
-    zonaPrincipal: '',
-    presupuestoMaximoUsd: extraerMontoUsd(referenciaEconomicaOriginal),
+    tipoPropiedad: organizacion?.tipoPropiedad?.valor || detectarTipoPropiedad(estado),
+    zonaPrincipal: organizacion?.zonas?.principal || '',
+    presupuestoMaximoUsd: organizacion
+      ? null
+      : extraerMontoUsd(referenciaEconomicaOriginal),
     dineroDisponibleUsd: null,
-    prioridad: estado?.seguimientoPrioritario ? 'Alta' : '',
+    prioridad: prioridadOrganizada || (estado?.seguimientoPrioritario ? 'Alta' : ''),
+    fechaLimite: organizacion?.fechaLimite?.texto || '',
     estado: 'Orientable',
     ultimaActualizacion: ahora.toISOString(),
     proximaAccion: 'Revisar búsqueda en Chatwoot',
     referenciaEconomicaOriginal,
-    descripcionOriginal
+    descripcionOriginal,
+    organizacion
   };
 }
 
@@ -104,13 +116,13 @@ function crearGoogleSheetsSync({ env = process.env, http } = {}) {
     return Boolean(endpoint && secreto);
   }
 
-  async function sincronizarBusqueda({ telefono, nombre, estado }) {
+  async function sincronizarBusqueda({ telefono, nombre, estado, organizacion = null }) {
     if (!estado?.orientable || !estaConfigurado()) {
       return { enabled: estaConfigurado(), synced: false };
     }
 
     const cliente = http || require('axios');
-    const busqueda = crearPayloadBusqueda({ telefono, nombre, estado });
+    const busqueda = crearPayloadBusqueda({ telefono, nombre, estado, organizacion });
     const respuesta = await cliente.post(
       endpoint,
       { secreto, accion: 'upsert', busqueda },

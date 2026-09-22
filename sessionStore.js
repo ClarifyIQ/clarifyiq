@@ -43,11 +43,43 @@ function eliminarSesion(telefono) {
   escribirDB(db);
 }
 
+function guardarOrganizacion(telefono, { organizacion, sourceUntil } = {}) {
+  if (!organizacion || typeof organizacion !== 'object') return false;
+
+  const db = leerDB();
+  const sesion = db.conversaciones[telefono];
+  if (!sesion) return false;
+
+  const nuevaFecha = new Date(sourceUntil || 0).getTime();
+  const fechaExistente = new Date(sesion.ultimaOrganizacion || 0).getTime();
+  if (Number.isFinite(fechaExistente) && fechaExistente > nuevaFecha) {
+    return false;
+  }
+
+  const cambios = Array.isArray(organizacion.cambiosDetectados)
+    ? organizacion.cambiosDetectados.map(cambio => ({
+        ...cambio,
+        fecha: sourceUntil || new Date().toISOString()
+      }))
+    : [];
+
+  sesion.organizacionComprador = organizacion;
+  sesion.ultimaOrganizacion = sourceUntil || new Date().toISOString();
+  sesion.historialOrganizacion = [
+    ...(Array.isArray(sesion.historialOrganizacion) ? sesion.historialOrganizacion : []),
+    ...cambios
+  ].slice(-200);
+  db.conversaciones[telefono] = sesion;
+  escribirDB(db);
+  return true;
+}
+
 module.exports = {
   obtenerRutaDB,
   leerDB,
   escribirDB,
   obtenerSesion,
   guardarSesion,
+  guardarOrganizacion,
   eliminarSesion
 };
