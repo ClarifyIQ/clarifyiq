@@ -112,13 +112,128 @@ test('registra el recorrido interno sin exponer datos sensibles', async () => {
   assert.deepEqual(logs, [
     'Organizador V1: ejecución iniciada',
     'Organizador V1: resultado guardado',
-    'Google Sheets: sincronización iniciada',
+    'Google Sheets: sincronización iniciada — organizacionIncluida: true',
     'Google Sheets: sincronización completada'
   ]);
   assert.equal(logs.join('\n').includes(telefono), false);
   assert.equal(logs.join('\n').includes(texto), false);
   assert.equal(logs.join('\n').includes('75000000'), false);
   assert.equal(logs.join('\n').includes('60000000'), false);
+});
+
+test('recupera la organización persistida más reciente antes de sincronizar', async () => {
+  const organizacionPersistida = {
+    dormitorios: { cantidad: 3, textoOriginal: 'Necesito 3 dormitorios' }
+  };
+  const sesionInicial = sesionOrientable();
+  const sesionActualizada = {
+    ...sesionOrientable(),
+    organizacionComprador: organizacionPersistida
+  };
+  let lecturas = 0;
+  const sincronizaciones = [];
+  const logs = [];
+
+  const procesador = crearProcesadorMensajes({
+    chatwoot: { estaConfigurado: () => false },
+    obtener: () => {
+      lecturas += 1;
+      return lecturas === 1 ? sesionInicial : sesionActualizada;
+    },
+    guardar: () => {},
+    enviarMeta: async () => {},
+    organizer: {
+      organizar: async () => ({ enabled: true, organized: false })
+    },
+    sheetsSync: {
+      sincronizarBusqueda: async datos => sincronizaciones.push(datos)
+    },
+    logger: {
+      log: mensaje => logs.push(mensaje),
+      error: () => {}
+    }
+  });
+
+  await procesador.procesar({
+    telefono: '5491',
+    texto: 'También necesito 2 baños'
+  });
+  await esperarSegundoPlano();
+
+  assert.equal(sincronizaciones.length, 1);
+  assert.equal(sincronizaciones[0].organizacion, organizacionPersistida);
+  assert.ok(logs.includes(
+    'Google Sheets: sincronización iniciada — organizacionIncluida: true'
+  ));
+});
+
+test('si OpenAI no genera una organización nueva envía la ya persistida', async () => {
+  const organizacionPersistida = {
+    dineroDisponible: { monto: 60000000, moneda: 'ARS' },
+    financiacion: { estado: 'si', monto: 15000000, moneda: 'ARS' }
+  };
+  const sesion = {
+    ...sesionOrientable(),
+    organizacionComprador: organizacionPersistida
+  };
+  const sincronizaciones = [];
+
+  const procesador = crearProcesadorMensajes({
+    chatwoot: { estaConfigurado: () => false },
+    obtener: () => sesion,
+    guardar: () => {},
+    enviarMeta: async () => {},
+    organizer: {
+      organizar: async () => ({ enabled: true, organized: false })
+    },
+    sheetsSync: {
+      sincronizarBusqueda: async datos => sincronizaciones.push(datos)
+    },
+    logger: { log: () => {}, error: () => {} }
+  });
+
+  await procesador.procesar({
+    telefono: '5491',
+    texto: 'También necesito 2 baños'
+  });
+  await esperarSegundoPlano();
+
+  assert.equal(sincronizaciones.length, 1);
+  assert.equal(sincronizaciones[0].organizacion, organizacionPersistida);
+});
+
+test('mantiene la sincronización básica cuando no existe organización', async () => {
+  const sincronizaciones = [];
+  const logs = [];
+
+  const procesador = crearProcesadorMensajes({
+    chatwoot: { estaConfigurado: () => false },
+    obtener: () => sesionOrientable(),
+    guardar: () => {},
+    enviarMeta: async () => {},
+    organizer: {
+      organizar: async () => ({ enabled: false, organized: false })
+    },
+    sheetsSync: {
+      sincronizarBusqueda: async datos => sincronizaciones.push(datos)
+    },
+    logger: {
+      log: mensaje => logs.push(mensaje),
+      error: () => {}
+    }
+  });
+
+  await procesador.procesar({
+    telefono: '5491',
+    texto: 'También necesito 2 baños'
+  });
+  await esperarSegundoPlano();
+
+  assert.equal(sincronizaciones.length, 1);
+  assert.equal(sincronizaciones[0].organizacion, null);
+  assert.ok(logs.includes(
+    'Google Sheets: sincronización iniciada — organizacionIncluida: false'
+  ));
 });
 
 test('si OpenAI falla conserva el flujo y usa la organización anterior', async () => {
