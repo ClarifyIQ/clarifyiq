@@ -114,6 +114,36 @@ test('envía la búsqueda orientable al endpoint configurado', async () => {
   assert.equal(llamadas[0][1].busqueda.nombre, 'Marco');
 });
 
+test('tolera una demora simulada de Apps Script superior a ocho segundos', async () => {
+  const demoraSimuladaMs = 12000;
+  let timeoutConfigurado;
+  const sync = crearGoogleSheetsSync({
+    env: {
+      GOOGLE_SHEETS_WEBHOOK_URL: 'https://example.test/sync',
+      GOOGLE_SHEETS_SYNC_SECRET: 'secreto'
+    },
+    http: {
+      post: async (_url, _body, configuracion) => {
+        timeoutConfigurado = configuracion.timeout;
+        if (demoraSimuladaMs > configuracion.timeout) {
+          throw new Error(`timeout of ${configuracion.timeout}ms exceeded`);
+        }
+        return { data: { ok: true, row: 7 } };
+      }
+    }
+  });
+
+  const resultado = await sync.sincronizarBusqueda({
+    telefono: '5491',
+    nombre: 'Marco',
+    estado: estadoOrientable()
+  });
+
+  assert.equal(timeoutConfigurado, 30000);
+  assert.equal(resultado.synced, true);
+  assert.equal(resultado.row, 7);
+});
+
 test('no sincroniza estados que todavía no son orientables', async () => {
   const sync = crearGoogleSheetsSync({
     env: {

@@ -75,6 +75,52 @@ test('organiza en segundo plano y sincroniza el resultado sin demorar WhatsApp',
   assert.equal(organizacionesGuardadas[0][0], '5491');
 });
 
+test('registra el recorrido interno sin exponer datos sensibles', async () => {
+  const logs = [];
+  const telefono = '54911112222';
+  const texto = 'Tengo 75 millones y 60 millones disponibles';
+  const logger = {
+    log: (...partes) => logs.push(partes.join(' ')),
+    error: (...partes) => logs.push(partes.join(' '))
+  };
+
+  const procesador = crearProcesadorMensajes({
+    chatwoot: { estaConfigurado: () => false },
+    obtener: () => sesionOrientable(),
+    guardar: () => {},
+    guardarOrganizacionResultado: () => true,
+    enviarMeta: async () => {},
+    organizer: {
+      organizar: async () => ({
+        organized: true,
+        organizacion: {
+          presupuestoMaximo: { monto: 75000000, moneda: 'ARS' },
+          dineroDisponible: { monto: 60000000, moneda: 'ARS' }
+        },
+        sourceUntil: '2026-09-21T18:10:00.000Z'
+      })
+    },
+    sheetsSync: {
+      sincronizarBusqueda: async () => ({ enabled: true, synced: true })
+    },
+    logger
+  });
+
+  await procesador.procesar({ telefono, texto });
+  await esperarSegundoPlano();
+
+  assert.deepEqual(logs, [
+    'Organizador V1: ejecución iniciada',
+    'Organizador V1: resultado guardado',
+    'Google Sheets: sincronización iniciada',
+    'Google Sheets: sincronización completada'
+  ]);
+  assert.equal(logs.join('\n').includes(telefono), false);
+  assert.equal(logs.join('\n').includes(texto), false);
+  assert.equal(logs.join('\n').includes('75000000'), false);
+  assert.equal(logs.join('\n').includes('60000000'), false);
+});
+
 test('si OpenAI falla conserva el flujo y usa la organización anterior', async () => {
   const sincronizaciones = [];
   const mensajesMeta = [];

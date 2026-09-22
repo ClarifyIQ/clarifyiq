@@ -126,7 +126,7 @@ function crearGoogleSheetsSync({ env = process.env, http } = {}) {
     const respuesta = await cliente.post(
       endpoint,
       { secreto, accion: 'upsert', busqueda },
-      { timeout: 8000, headers: { 'Content-Type': 'application/json' } }
+      { timeout: 30000, headers: { 'Content-Type': 'application/json' } }
     );
 
     if (respuesta?.data?.ok !== true) {
