@@ -766,7 +766,7 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "NOMBRE_CONFIRMADO") {
     return {
-      respuesta: `Gracias, ${estado.nombreComprador}. Tu búsqueda quedó registrada.\n\nPodés seguir agregando cualquier detalle o cambio por este medio.`,
+      respuesta: `Gracias, ${estado.nombreComprador}. Tu búsqueda ya quedó registrada y desde ahora vamos a trabajar sobre ella.\n\nCuando aparezca una propiedad compatible, primero la evaluamos juntos: te compartimos la información, las fotos, la ubicación, los puntos a favor y los puntos que conviene mirar, para evitar visitas innecesarias.\n\nTus datos no se comparten con nadie. Primero te pedimos autorización.\n\nMientras tanto, si cambia algo de tu búsqueda, podés escribirnos por acá.`,
       accion: "NOMBRE_CONFIRMADO",
       derivar: false
     };
