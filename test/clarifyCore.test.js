@@ -18,6 +18,52 @@ test('reconoce Yes como respuesta afirmativa de continuidad', () => {
   assert.equal(estado.ultimaAccionEstado, 'PREGUNTAR_REFERENCIA_ECONOMICA');
 });
 
+test('acepta y registra las opciones numéricas del tipo de propiedad', () => {
+  const opciones = {
+    '1': 'Casa',
+    '2': 'Dúplex',
+    '3': 'PH',
+    '4': 'Departamento',
+    '5': 'Terreno',
+    '6': 'Quinta',
+    '7': 'Campo',
+    '8': 'Local',
+    '9': 'Propiedad comercial'
+  };
+
+  for (const [opcion, tipoEsperado] of Object.entries(opciones)) {
+    const estado = avanzar(['Hola', opcion]);
+
+    assert.equal(estado.etapa, 'continuidad');
+    assert.equal(estado.ultimaAccionEstado, 'PREGUNTAR_CONTINUIDAD');
+    assert.equal(estado.tipoPropiedad, tipoEsperado);
+  }
+});
+
+test('no acepta un número fuera de las opciones del tipo de propiedad', () => {
+  const estado = avanzar(['Hola', '10']);
+
+  assert.equal(estado.etapa, 'apertura');
+  assert.equal(estado.ultimaAccionEstado, 'TIPO_PROPIEDAD_NO_VALIDO');
+});
+
+test('acepta número o palabra con puntuación y guarda la palabra correspondiente', () => {
+  const casos = [
+    ['1.', 'Casa'],
+    ['1)', 'Casa'],
+    ['Casa.', 'Casa'],
+    ['2.', 'Dúplex'],
+    ['PH.', 'PH'],
+    ['9)', 'Propiedad comercial']
+  ];
+
+  for (const [respuesta, tipoEsperado] of casos) {
+    const estado = avanzar(['Hola', respuesta]);
+    assert.equal(estado.tipoPropiedad, tipoEsperado);
+    assert.equal(estado.etapa, 'continuidad');
+  }
+});
+
 test('retoma continuidad tras dos respuestas no interpretadas', () => {
   const estado = avanzar(['Hola', 'Casa', '3', 'tal vez', 'Si']);
 
