@@ -26,14 +26,19 @@ function ultimoMensaje(estado, categorias) {
 }
 
 function detectarTipoPropiedad(estado) {
+  if (estado?.tipoPropiedad) return String(estado.tipoPropiedad).trim();
+
   const mensaje = ultimoMensaje(estado, ['PREGUNTAR_CONTINUIDAD']);
   const texto = normalizarTexto(mensaje);
 
-  if (/\b(duplex|ph)\b/.test(texto)) return 'Dúplex / PH';
+  if (/\bph\b/.test(texto)) return 'PH';
+  if (/\bduplex\b/.test(texto)) return 'Dúplex';
   if (/\b(departamento|depto|monoambiente)\b/.test(texto)) return 'Departamento';
   if (/\b(terreno|lote)\b/.test(texto)) return 'Terreno';
-  if (/\b(quinta|chacra|campo)\b/.test(texto)) return 'Quinta / Campo';
-  if (/\b(local|comercio|propiedad comercial)\b/.test(texto)) return 'Local o propiedad comercial';
+  if (/\bquinta\b/.test(texto)) return 'Quinta';
+  if (/\b(chacra|campo)\b/.test(texto)) return 'Campo';
+  if (/\bpropiedad comercial\b/.test(texto)) return 'Propiedad comercial';
+  if (/\b(local|comercio)\b/.test(texto)) return 'Local';
   if (/\b(casa|vivienda|propiedad)\b/.test(texto)) return 'Casa';
   return '';
 }

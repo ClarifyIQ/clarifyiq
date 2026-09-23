@@ -21,7 +21,21 @@ function estadoOrientable() {
 }
 
 test('detecta el tipo de propiedad a partir del historial', () => {
-  assert.equal(detectarTipoPropiedad(estadoOrientable()), 'Dúplex / PH');
+  assert.equal(detectarTipoPropiedad(estadoOrientable()), 'Dúplex');
+});
+
+test('usa el tipo de propiedad registrado por una opción numérica', () => {
+  const payload = crearPayloadBusqueda({
+    telefono: '5493512345678',
+    nombre: 'Prueba',
+    estado: {
+      orientable: true,
+      tipoPropiedad: 'Departamento',
+      historial: []
+    }
+  });
+
+  assert.equal(payload.tipoPropiedad, 'Departamento');
 });
 
 test('extrae únicamente montos expresados en dólares', () => {
@@ -41,7 +55,7 @@ test('crea un payload estable para actualizar la misma búsqueda', () => {
   assert.equal(payload.idBusqueda, 'CL-5493761234567');
   assert.equal(payload.telefono, '+5493761234567');
   assert.equal(payload.nombre, 'Marco');
-  assert.equal(payload.tipoPropiedad, 'Dúplex / PH');
+  assert.equal(payload.tipoPropiedad, 'Dúplex');
   assert.equal(payload.presupuestoMaximoUsd, 50000);
   assert.equal(payload.prioridad, 'Alta');
   assert.equal(payload.estado, 'Orientable');
