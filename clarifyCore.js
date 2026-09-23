@@ -54,15 +54,15 @@ const RESPUESTAS = {
   ],
 
   PEDIR_DESCRIPCION_LIBRE: [
-    "Perfecto.\n\nA partir de ahora vamos a construir tu búsqueda teniendo en cuenta todo lo que para vos sea importante.\n\nPodés seguir escribiendo por este medio y agregar los detalles que consideres importantes.\n\nCada dato que compartas aporta valor y nos ayuda a comprender mejor qué estás buscando.\n\nPodés contarnos, por ejemplo:\n\n- la zona donde te gustaría vivir;\n- si necesitás estar cerca del trabajo, familia, colegios u otros lugares importantes;\n- características que para vos sean importantes de la propiedad;\n- prioridades personales o familiares;\n- cualquier información que pueda ayudarnos a identificar opciones más compatibles con tu búsqueda.\n\nToda la información que compartas queda registrada y ayuda a mantener tu búsqueda actualizada y activa. Cada nuevo dato nos permite comprender mejor tus necesidades y acompañarte durante el proceso.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
+    "Ahora contanos qué estás buscando. Podés incluir la zona, cantidad de dormitorios, características importantes o cualquier necesidad personal o familiar."
   ],
 
   ORIENTABLE: [
-    "Perfecto.\n\nA partir de ahora vamos a construir tu búsqueda teniendo en cuenta todo lo que para vos sea importante.\n\nPodés seguir escribiendo por este medio y agregar los detalles que consideres importantes.\n\nCada dato que compartas aporta valor y nos ayuda a comprender mejor qué estás buscando.\n\nPodés contarnos, por ejemplo:\n\n- la zona donde te gustaría vivir;\n- si necesitás estar cerca del trabajo, familia, colegios u otros lugares importantes;\n- características que para vos sean importantes de la propiedad;\n- prioridades personales o familiares;\n- cualquier información que pueda ayudarnos a identificar opciones más compatibles con tu búsqueda.\n\nToda la información que compartas queda registrada y ayuda a mantener tu búsqueda actualizada y activa. Cada nuevo dato nos permite comprender mejor tus necesidades y acompañarte durante el proceso.\n\nUn asesor revisará tu búsqueda y se comunicará con vos para continuar el proceso personalmente."
+    "Ahora contanos qué estás buscando. Podés incluir la zona, cantidad de dormitorios, características importantes o cualquier necesidad personal o familiar."
   ],
 
   PREGUNTAR_NOMBRE: [
-    "Perfecto, tu búsqueda ya quedó clara y la vamos a registrar.\n\nAntes de continuar, ¿cómo te llamás?"
+    "Perfecto, tu búsqueda ya quedó clara y la vamos a registrar.\n\nAntes de continuar, ¿cuál es tu nombre?"
   ],
 
   NOMBRE_NO_VALIDO: [
@@ -70,9 +70,11 @@ const RESPUESTAS = {
   ],
 
   ACOMPANAMIENTO: [
-    "Perfecto, lo dejamos registrado.\nDurante una búsqueda pueden aparecer nuevos detalles, cambios o prioridades.\nPodés compartirlos por este medio, porque toda esa información nos ayuda a identificar opciones más compatibles con lo que estás buscando.\nUn asesor revisará tu caso y se comunicará con vos para seguir acompañándote.",
-    "Entendido, quedó incorporado a tu búsqueda.\nPodés seguir sumando cualquier información que consideres importante: cambios, preferencias, dudas o nuevos datos.\nLa idea es acompañarte durante el proceso y tener en cuenta qué es importante para vos.\nUn asesor se comunicará con vos para continuar personalmente la búsqueda.",
-    "Gracias por compartir esa información.\nQuedó registrada junto con los datos de tu búsqueda.\nPodés seguir agregando cualquier detalle, cambio o consulta que consideres importante. Todo lo que nos compartas nos ayuda a comprender mejor qué estás buscando.\nUn asesor revisará la información de tu búsqueda y se comunicará con vos para continuar acompañándote personalmente."
+    "Entendido, queda registrado.",
+    "Recibimos tu mensaje y lo tendremos en cuenta.",
+    "Gracias por escribirnos. Lo dejamos anotado.",
+    "Queda registrado para tenerlo en cuenta.",
+    "Tomamos nota de tu mensaje."
   ],
 
   MENSAJE_REGISTRABLE: [
@@ -87,12 +89,12 @@ const RESPUESTAS = {
   ],
 
   CORTESIA: [
-    "De nada.\n\nCuando quieras sumar información o consultar novedades, podés escribirnos.",
-    "Gracias a vos.\n\nSeguimos teniendo en cuenta tu búsqueda."
+    "Gracias a vos.",
+    "Muchas gracias."
   ],
 
   SALUDO: [
-    "Hola.\n\nTu búsqueda sigue activa. Cuando quieras, podés agregar información o consultar novedades."
+    "Hola. Tu búsqueda sigue registrada."
   ],
 
   SEGUIMIENTO_PRIORITARIO: [
@@ -544,12 +546,6 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
-    if (esSenalUrgencia(texto)) {
-      estado.seguimientoPrioritario = true;
-      estado = guardarHistorial(estado, texto, "SEGUIMIENTO_PRIORITARIO");
-      estado.etapa = "orientable";
-      return estado;
-    }
 
     estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
@@ -766,7 +762,7 @@ function decidirSiguienteAccion(estado) {
 
   if (categoria === "NOMBRE_CONFIRMADO") {
     return {
-      respuesta: `Gracias, ${estado.nombreComprador}. Tu búsqueda ya quedó registrada y desde ahora vamos a trabajar sobre ella.\n\nCuando aparezca una propiedad compatible, primero la evaluamos juntos: te compartimos la información, las fotos, la ubicación, los puntos a favor y los puntos que conviene mirar, para evitar visitas innecesarias.\n\nTus datos no se comparten con nadie. Primero te pedimos autorización.\n\nMientras tanto, si cambia algo de tu búsqueda, podés escribirnos por acá.`,
+      respuesta: `Gracias, ${estado.nombreComprador}. Tu búsqueda ya quedó registrada y desde ahora vamos a trabajar sobre ella.\n\nCuando aparezca una propiedad compatible, primero la evaluamos juntos: te compartimos la información, las fotos, la ubicación, los puntos a favor y los puntos que conviene mirar, para evitar visitas innecesarias.\n\nTus datos no se comparten con nadie sin tu autorización.\n\nMientras tanto, si cambia algo de tu búsqueda, podés escribirnos por acá.`,
       accion: "NOMBRE_CONFIRMADO",
       derivar: false
     };
