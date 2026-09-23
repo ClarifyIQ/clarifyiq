@@ -10,7 +10,7 @@
 
 const RESPUESTAS = {
   APERTURA: [
-    "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex / PH\n3. Departamento\n4. Terreno\n5. Quinta / Campo\n6. Local o propiedad comercial"
+    "Hola, somos CasaLista.\n\nAyudamos a personas que quieren comprar una propiedad.\n\nNo hace falta que tengas todo definido desde el principio. La idea es ir conociendo mejor lo que necesitás para poder acompañarte durante ese proceso.\n\nCuanta más información compartas con nosotros, más posibilidades tendremos de identificar oportunidades compatibles con vos.\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex\n3. PH\n4. Departamento\n5. Terreno\n6. Quinta\n7. Campo\n8. Local\n9. Propiedad comercial"
   ],
 
   TIPO_PROPIEDAD_NO_VALIDO: [
@@ -124,6 +124,7 @@ function crearEstadoInicial() {
     nombreConfirmado: false,
     esperandoNombre: false,
     debePreguntarNombre: false,
+    tipoPropiedad: null,
     intencion: null,
     referenciaEconomica: null,
     intentosReferenciaEconomica: 0,
@@ -159,6 +160,7 @@ function asegurarEstado(estadoActual) {
       estadoActual.debePreguntarNombre ||
       (estadoActual.orientable && !tieneControlDeNombre)
     ),
+    tipoPropiedad: estadoActual.tipoPropiedad ?? null,
     intencion: estadoActual.intencion ?? null,
     referenciaEconomica:
       estadoActual.referenciaEconomica ??
@@ -260,7 +262,7 @@ function esSaludo(texto) {
 function preguntaPorCampo(campo) {
   const preguntas = {
     tipo_propiedad:
-      'Para activar la búsqueda:\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex / PH\n3. Departamento\n4. Terreno\n5. Quinta / Campo\n6. Local o propiedad comercial',
+      'Para activar la búsqueda:\n\n¿Qué tipo de propiedad estás buscando?\n\n1. Casa\n2. Dúplex\n3. PH\n4. Departamento\n5. Terreno\n6. Quinta\n7. Campo\n8. Local\n9. Propiedad comercial',
     zona_o_criterio:
       'Para activar la búsqueda:\n\n¿En qué zona te interesa o necesitás estar cerca de algo?',
     presupuesto:
@@ -303,15 +305,37 @@ function requiereOperador(texto) {
 }
 
 function detectaTipoPropiedad(texto) {
-  const t = normalizar(texto).replace(/[¿?¡!.,;:]/g, " ").trim();
+  return Boolean(tipoPropiedadElegido(texto));
+}
 
-  return (
-    /\b(casa|casita|casona|vivienda|propiedad)\b/.test(t) ||
-    /\b(departamento|departamemto|departameto|depto|monoambiente)\b/.test(t) ||
-    /\b(terreno|tereno|terrenoo|lote|lotes|chacra|chacras|campo|campos)\b/.test(t) ||
-    /\b(quinta|qunta|duplex|dúplex|ph|local|comercio)\b/.test(t) ||
-    /\bpropiedad comercial\b/.test(t)
-  );
+function tipoPropiedadElegido(texto) {
+  const t = normalizar(texto)
+    .replace(/[¿?¡!.,;:()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const opciones = {
+    "1": "Casa",
+    "2": "Dúplex",
+    "3": "PH",
+    "4": "Departamento",
+    "5": "Terreno",
+    "6": "Quinta",
+    "7": "Campo",
+    "8": "Local",
+    "9": "Propiedad comercial"
+  };
+
+  if (opciones[t]) return opciones[t];
+  if (/\bpropiedad comercial\b/.test(t)) return "Propiedad comercial";
+  if (/\b(duplex|dúplex)\b/.test(t)) return "Dúplex";
+  if (/\bph\b/.test(t)) return "PH";
+  if (/\b(departamento|departamemto|departameto|depto|monoambiente)\b/.test(t)) return "Departamento";
+  if (/\b(terreno|tereno|terrenoo|lote|lotes)\b/.test(t)) return "Terreno";
+  if (/\b(quinta|qunta)\b/.test(t)) return "Quinta";
+  if (/\b(chacra|chacras|campo|campos)\b/.test(t)) return "Campo";
+  if (/\b(local|comercio)\b/.test(t)) return "Local";
+  if (/\b(casa|casita|casona|vivienda|propiedad)\b/.test(t)) return "Casa";
+  return null;
 }
 
 function detectaRespuestaVisita(texto) {
@@ -436,6 +460,7 @@ function actualizarEstado(mensaje, estadoActual) {
     const motivoCierre = ultimoCierre(estado);
 
     if (motivoCierre === "TIPO_PROPIEDAD_FINAL" && detectaTipoPropiedad(texto)) {
+      estado.tipoPropiedad = tipoPropiedadElegido(texto);
       estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
       estado.etapa = "continuidad";
       return estado;
@@ -533,6 +558,7 @@ function actualizarEstado(mensaje, estadoActual) {
 
   if (estado.etapa === "apertura") {
     if (detectaTipoPropiedad(texto)) {
+      estado.tipoPropiedad = tipoPropiedadElegido(texto);
       estado = guardarHistorial(estado, texto, "PREGUNTAR_CONTINUIDAD");
       estado.etapa = "continuidad";
       return estado;
