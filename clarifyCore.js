@@ -249,7 +249,11 @@ function esCortesia(texto) {
     /\b(estoy conforme|quede conforme|muy conforme|voy a recomendarlos|los voy a recomendar|los recomendare|altamente recomendables|muy recomendables|excelente atencion|muy buena atencion|buen servicio|muy buen servicio|buena onda|se pasan|son unos genios|muy atentos|excelente trabajo)\b/.test(t) &&
     /\b(gracias|agradezco|conforme|recomendar|recomendarlos|recomendare|recomendables|atencion|servicio|buena onda|se pasan|genios|atentos|trabajo|amable)\b/.test(t);
 
-  return cortesiaExacta || cortesiaContextual;
+  const cortesiaCombinada =
+    /\b(gracias|agradezco|agradecido|agradecida)\b/.test(t) ||
+    /\b(muy amable|que amable)\b/.test(t);
+
+  return cortesiaExacta || cortesiaContextual || cortesiaCombinada;
 }
 
 function esSaludo(texto) {
