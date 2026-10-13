@@ -550,6 +550,12 @@ function actualizarEstado(mensaje, estadoActual) {
       return estado;
     }
 
+    if (esSenalUrgencia(texto)) {
+      estado.seguimientoPrioritario = true;
+      estado = guardarHistorial(estado, texto, "SEGUIMIENTO_PRIORITARIO");
+      estado.etapa = "orientable";
+      return estado;
+    }
 
     estado = guardarHistorial(estado, texto, "ACOMPANAMIENTO");
     estado.etapa = "orientable";
